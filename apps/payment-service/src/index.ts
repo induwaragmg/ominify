@@ -1,7 +1,12 @@
+import { clerkMiddleware } from "@hono/clerk-auth";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import sessionRoute from "./routes/session.route.js";
+import { cors } from "hono/cors";
 
 const app = new Hono();
+app.use('*', clerkMiddleware())
+app.use("*", cors({origin: ["http://localhost:3002"]})) //only allow requests from the client app
 
 app.get("/health", (c) => {
   return c.json({
@@ -10,6 +15,54 @@ app.get("/health", (c) => {
     timestamp: Date.now(),
   });
 });
+
+app.route("/sessions", sessionRoute);
+
+
+
+// app.get('/test', shouldBeUser, (c) => {
+//   return c.json({
+//     message: "Payment service is Authenticated!",
+//     userId: c.get("userId"),  //userId to send to payment provider
+//   });
+// });
+
+// app.get('/app', shouldBeUser, async (c) => {
+//   const { products } = await c.req.json();
+
+//   const totalPrice = await Promise.all(
+//     products.map( async (product: any) => {
+//       const productInDb : any = await fetch(`localhost:8000/products/${product.id}`);
+//       return productInDb.price * product.quantity;
+//     })
+//   );
+// });
+
+// app.post("/create-stripe-product", async (c) => {
+//   const res = await stripe.products.create({
+//     id: "123",
+//     name:"test product",
+//     default_price_data: {
+//       currency: "usd",
+//       unit_amount: 10 * 100,
+//     }
+//   })
+
+//   return c.json(res); 
+// })
+
+// app.get("/stripe-product-price", async (c) => {
+//   const res = await stripe.products.create({
+//     id: "124",
+//     name:"test product",
+//     default_price_data: {
+//       currency: "usd",
+//       unit_amount: 10 * 100,
+//     }
+//   })
+ 
+//   return c.json(res); 
+// }) 
 
 const start = async () => {
   try {
@@ -27,4 +80,6 @@ const start = async () => {
     process.exit(1);
   }
 };
+
+
 start();

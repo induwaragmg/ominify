@@ -1,7 +1,7 @@
 "use client";
 
 import useCartStore from "@/stores/cartStore";
-import { ProductType } from "@/types";
+import { ProductType } from "@repo/types";
 import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,8 +10,8 @@ import { toast } from "react-toastify";
 
 const ProductCard = ({ product }: { product: ProductType }) => {
   const [productTypes, setProductTypes] = useState({
-    size: product.sizes[0],
-    color: product.colors[0],
+    size: product.sizes[0]!,
+    color: product.colors[0]!,
   });
 
   const { addToCart } = useCartStore();
@@ -45,7 +45,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       <Link href={`/products/${product.id}`}>
         <div className="relative aspect-2/3">
           <Image
-            src={product.images?.[productTypes.color] || ""} //put no image placeholder if no image
+            src={(product.images as Record<string, string>)?.[productTypes.color] || ""} //put no image placeholder if no image
             alt={product.name}
             fill
             className="object-cover hover:scale-105 transition-all duration-300"
@@ -83,7 +83,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
             <div className="flex items-center gap-2">
               {product.colors.map((color) => (
                 <div
-                  className={`cursor-pointer border-1 ${
+                  className={`cursor-pointer border ${
                     productTypes.color === color
                       ? "border-gray-400"
                       : "border-gray-200"
@@ -94,7 +94,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
                   }
                 >
                   <div
-                    className="w-[14px] h-[14px] rounded-full"
+                    className="w-3.5 h-3.5 rounded-full"
                     style={{ backgroundColor: color }}
                   />
                 </div>

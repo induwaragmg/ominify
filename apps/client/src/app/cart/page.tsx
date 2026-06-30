@@ -1,9 +1,10 @@
 "use client";
 
-import PaymentForm from "@/components/PaymentForm";
+// import PaymentForm from "@/components/PaymentForm";
 import ShippingForm from "@/components/ShippingForm";
+import StripePaymentForm from "@/components/StripePaymentForm";
 import useCartStore from "@/stores/cartStore";
-import { CartItemsType, ShippingFormInputs } from "@/types";
+import { CartItemsType, ShippingFormInputs } from "@repo/types";
 import { ArrowRight, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -126,7 +127,7 @@ const CartPage = () => {
       {/* STEPS & DETAILS */}
       <div className="w-full flex flex-col lg:flex-row gap-5">
         {/* STEPS */}
-        <div className="w-full lg:w-7/12 shadow-lg border-1 border-gray-100 p-4 rounded-lg flex flex-col gap-4">
+        <div className="w-full lg:w-7/12 shadow-lg border border-gray-100 p-4 rounded-lg flex flex-col gap-4">
           {activeStep === 1 ? (
             cart.map((item) => (
               // SINGLE CART ITEM
@@ -139,7 +140,7 @@ const CartPage = () => {
                   {/* IMAGE */}
                   <div className="relative w-32 h-32 bg-gray-50 rounded-sm overflow-hidden">
                     <Image
-                      src={item.images?.[item.selectedColor] || "" } //put no image placeholder if no image
+                      src={(item.images as Record<string, string>)?.[item.selectedColor] || "" } //put no image placeholder if no image
                       alt={item.name}
                       fill
                       className="object-contain"
@@ -174,7 +175,7 @@ const CartPage = () => {
           ) : activeStep === 2 ? (
             <ShippingForm setShippingForm={setShippingForm} />
           ) : activeStep === 3 && shippingForm ? (
-            <PaymentForm />
+            <StripePaymentForm shippingForm={shippingForm} />
           ) : (
             <p className="text-sm text-gray-500">
               Please fill in the shipping form to continue.
@@ -182,7 +183,7 @@ const CartPage = () => {
           )}
         </div>
         {/* DETAILS */}
-        <div className="w-full lg:w-5/12 shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
+        <div className="w-full lg:w-5/12 shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
           <h2 className="font-semibold">Cart Details</h2>
           <div className="flex flex-col gap-4">
             <div className="flex justify-between text-sm">

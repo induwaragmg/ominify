@@ -36,3 +36,9 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+#temp 
+tempdetails.txt
+
+# prisma db 
+packages/product-db/generated
