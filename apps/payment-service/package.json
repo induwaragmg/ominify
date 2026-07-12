@@ -11,7 +11,8 @@
     "@hono/clerk-auth": "^3.1.1",
     "@hono/node-server": "^1.19.14",
     "hono": "^4.12.15",
-    "stripe": "^22.1.1"
+    "stripe": "^22.1.1",
+    "@repo/kafka": "workspace:*"
   },
   "devDependencies": {
     "@repo/types": "workspace:*",

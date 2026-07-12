@@ -20,7 +20,7 @@ const categories = [
   {
     name: "T-shirts",
     icon: <Shirt className="w-4 h-4" />,
-    slug: "t-shirts",
+    slug: "t-shirt",
   },
   {
     name: "Shoes",

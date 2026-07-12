@@ -31,7 +31,7 @@ const Navbar = () => {
         <Bell className="w-4 h-4 text-gray-600" />
         <ShoppingCartIcon />
         <Show when="signed-out">
-          <SignInButton />
+          <SignInButton/>
         </Show>
         <Show when="signed-in">
           <ProfileButton />

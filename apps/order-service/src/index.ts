@@ -3,6 +3,8 @@ import { clerkPlugin} from '@clerk/fastify';
 import { shouldBeUser } from './middleware/authMiddleware.js';
 import { connnectOrderDb } from '@repo/order-db';
 import { OrderRoute } from './routes/order.js';
+import { consumer, producer } from './utils/kafka.js';
+import { runKafkaSubscriptions } from './utils/subscriptions.js';
 
 const fastify = Fastify();
 fastify.register(clerkPlugin)
@@ -25,11 +27,16 @@ fastify.register(OrderRoute);
 
 const start = async () => {
     try {
-        await connnectOrderDb();
+        await Promise.all([
+          await connnectOrderDb(),
+          await producer.connect(),
+          await consumer.connect(),
+        ]);
+        await runKafkaSubscriptions();
         await fastify.listen({ port: 8001 });
         console.log('Order service is running on port 8001');
-    } catch (err) {
-        fastify.log.error(err);
+    } catch (error) {
+        fastify.log.error(error);
         process.exit(1);
     }
 }

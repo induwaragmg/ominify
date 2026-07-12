@@ -3,6 +3,10 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import sessionRoute from "./routes/session.route.js";
 import { cors } from "hono/cors";
+import stripe from "./utils/stripe.js";
+import webhookRoute from "./routes/webhooks.route.js";
+import { consumer, producer } from "./utils/kafka.js";
+import { runKafkaSubscriptions } from "./utils/subscriptions.js";
 
 const app = new Hono();
 app.use('*', clerkMiddleware())
@@ -15,8 +19,9 @@ app.get("/health", (c) => {
     timestamp: Date.now(),
   });
 });
-
+                                                                                                    
 app.route("/sessions", sessionRoute);
+app.route("/webhooks", webhookRoute);
 
 
 
@@ -40,11 +45,11 @@ app.route("/sessions", sessionRoute);
 
 // app.post("/create-stripe-product", async (c) => {
 //   const res = await stripe.products.create({
-//     id: "123",
-//     name:"test product",
+//     id: "1",
+//     name:"Adidas coreFit T-Shirt",
 //     default_price_data: {
 //       currency: "usd",
-//       unit_amount: 10 * 100,
+//       unit_amount: 69 * 100,
 //     }
 //   })
 
@@ -66,6 +71,8 @@ app.route("/sessions", sessionRoute);
 
 const start = async () => {
   try {
+    Promise.all([await producer.connect(), await consumer.connect()]);
+    await runKafkaSubscriptions();
     serve(
       {
         fetch: app.fetch,

@@ -7,6 +7,8 @@ import { useState } from "react";
 const CheckoutForm = ({shippingForm}: {shippingForm: ShippingFormInputs}) => {
 
   const checkoutState = useCheckoutElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<String | null>(null);
 
   if (checkoutState.type === 'loading') {
     return (
@@ -22,12 +24,13 @@ const CheckoutForm = ({shippingForm}: {shippingForm: ShippingFormInputs}) => {
 
   const checkout = checkoutState.checkout;
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<String | null>(null);
+  
 
   const handleClick = async () => {
     setLoading(true);
+    
     await checkout.updateEmail(shippingForm.email);
+
     await checkout.updateShippingAddress({
         name: "shipping_address",
         address: {
@@ -48,7 +51,9 @@ const CheckoutForm = ({shippingForm}: {shippingForm: ShippingFormInputs}) => {
     <form>
       <PaymentElement options={{layout: 'accordion'}}/>
       <div>
-      <button disabled={!checkout.canConfirm || loading} onClick={handleClick}>
+      {/* <button disabled={!checkout.canConfirm || loading} onClick={handleClick}  */}
+      <button disabled={loading} onClick={handleClick} 
+      className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:cursor-pointer" >
         Pay
       </button>
       {error && <div>{error}</div>}
