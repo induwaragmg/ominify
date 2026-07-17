@@ -20,8 +20,40 @@ import { Button } from "@/components/ui/button";
 import EditUser from "@/components/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
+import { auth, User } from "@clerk/nextjs/server";
 
-const SingleUserPage = () => {
+const getData = async (id: string): Promise<User | null> => {
+  const { getToken } = await auth();
+  const token = await getToken();
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL}/users/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.log(err);
+    return null;
+  }
+};
+
+const SingleUserPage = async ({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) => {
+  const { id } = await params;
+  const data = await getData(id);
+
+  if (!data) {
+    return <div className="">User not found!</div>;
+  }
+
   return (
     <div className="">
       <Breadcrumb>
@@ -35,7 +67,9 @@ const SingleUserPage = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>John Doe</BreadcrumbPage>
+            <BreadcrumbPage>
+              {data?.firstName + " " + data?.lastName || data?.username || "-"}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -51,7 +85,7 @@ const SingleUserPage = () => {
                 <HoverCardTrigger>
                   <BadgeCheck
                     size={36}
-                    className="rounded-full bg-blue-500/30 border-1 border-blue-500/50 p-2"
+                    className="rounded-full bg-blue-500/30 border border-blue-500/50 p-2"
                   />
                 </HoverCardTrigger>
                 <HoverCardContent>
@@ -65,7 +99,7 @@ const SingleUserPage = () => {
                 <HoverCardTrigger>
                   <Shield
                     size={36}
-                    className="rounded-full bg-green-800/30 border-1 border-green-800/50 p-2"
+                    className="rounded-full bg-green-800/30 border border-green-800/50 p-2"
                   />
                 </HoverCardTrigger>
                 <HoverCardContent>
@@ -80,7 +114,7 @@ const SingleUserPage = () => {
                 <HoverCardTrigger>
                   <Candy
                     size={36}
-                    className="rounded-full bg-yellow-500/30 border-1 border-yellow-500/50 p-2"
+                    className="rounded-full bg-yellow-500/30 border border-yellow-500/50 p-2"
                   />
                 </HoverCardTrigger>
                 <HoverCardContent>
@@ -94,7 +128,7 @@ const SingleUserPage = () => {
                 <HoverCardTrigger>
                   <Citrus
                     size={36}
-                    className="rounded-full bg-orange-500/30 border-1 border-orange-500/50 p-2"
+                    className="rounded-full bg-orange-500/30 border border-orange-500/50 p-2"
                   />
                 </HoverCardTrigger>
                 <HoverCardContent>
@@ -110,10 +144,18 @@ const SingleUserPage = () => {
           <div className="bg-primary-foreground p-4 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <Avatar className="size-12">
-                <AvatarImage src="https://avatars.githubusercontent.com/u/1486366" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarImage src={data.imageUrl} />
+                <AvatarFallback>
+                  {data?.firstName?.charAt(0) ||
+                    data?.username?.charAt(0) ||
+                    "-"}
+                </AvatarFallback>
               </Avatar>
-              <h1 className="text-xl font-semibold">John Doe</h1>
+              <h1 className="text-xl font-semibold">
+                {data?.firstName + " " + data?.lastName ||
+                  data?.username ||
+                  "-"}
+              </h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel
@@ -121,7 +163,7 @@ const SingleUserPage = () => {
               cum corrupti sed repudiandae ipsum, harum recusandae ratione ipsam
               in, quis quia.
             </p>
-          </div> 
+          </div>
           {/* INFORMATION CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg">
             <div className="flex items-center justify-between">
@@ -141,42 +183,37 @@ const SingleUserPage = () => {
                 <Progress value={66} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold">Full Name:</span>
-                <span>John Doe</span>
+                <span className="font-bold">Full name:</span>
+                <span>
+                  {data?.firstName + " " + data?.lastName ||
+                    data?.username ||
+                    "-"}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Email:</span>
-                <span>john.doe@gmail.com</span>
+                <span>{data.emailAddresses[0]?.emailAddress || "-"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Phone:</span>
-                <span>+1 234 5678</span>
+                <span>{data.phoneNumbers[0]?.phoneNumber || "-"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold">Address:</span>
-                <span>123, Main St</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold">City:</span>
-                <span>New York</span>
-              </div>
-              {/* <div className="flex items-center gap-2">
                 <span className="font-bold">Role:</span>
-                <Badge>Admin</Badge>
-              </div> */}
+                <span>{String(data.publicMetadata?.role) || "user"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">Status:</span>
+                <span>{data.banned ? "banned" : "active"}</span>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
-              Joined on 2025.01.01
+              Joined on {new Date(data.createdAt).toLocaleDateString("en-US")}
             </p>
           </div>
-          {/* CARD LIST CONTAINER
-          <div className="bg-primary-foreground p-4 rounded-lg">
-            <CardList title="Recent Transactions" />
-          </div> */}
         </div>
         {/* RIGHT */}
         <div className="w-full xl:w-2/3 space-y-6">
-          
           {/* CHART CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg">
             <h1 className="text-xl font-semibold">User Activity</h1>

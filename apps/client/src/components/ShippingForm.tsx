@@ -1,8 +1,15 @@
+"use client";
+
 import { ShippingFormInputs, shippingFormSchema } from "@repo/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { useUser } from "@clerk/nextjs";
+import { useEffect } from "react";
+
+
+
 
 const ShippingForm = ({
   setShippingForm,
@@ -12,12 +19,34 @@ const ShippingForm = ({
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<ShippingFormInputs>({
     resolver: zodResolver(shippingFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+    },
   });
 
   const router = useRouter();
+  
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (!user) return;
+
+    reset({
+      name: user.fullName || "",
+      email: user.primaryEmailAddress?.emailAddress || "",
+      phone: user.primaryPhoneNumber?.phoneNumber || "",
+      address: "",
+      city: "",
+    });
+  }, [user, reset]);
 
   const handleShippingForm: SubmitHandler<ShippingFormInputs> = (data) => {
     setShippingForm(data);
@@ -39,7 +68,6 @@ const ShippingForm = ({
           id="name"
           placeholder="John Doe"
           {...register("name")}
-          value="John Doe"
         />
         {errors.name && (
           <p className="text-xs text-red-500">{errors.name.message}</p>
@@ -55,7 +83,6 @@ const ShippingForm = ({
           id="email"
           placeholder="johndoe@gmail.com"
           {...register("email")}
-          value="johndoe@gmail.com"
         />
         {errors.email && (
           <p className="text-xs text-red-500">{errors.email.message}</p>
@@ -71,7 +98,6 @@ const ShippingForm = ({
           id="phone"
           placeholder="123456789"
           {...register("phone")}
-          value="123456789"
         />
         {errors.phone && (
           <p className="text-xs text-red-500">{errors.phone.message}</p>

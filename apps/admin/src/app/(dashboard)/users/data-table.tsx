@@ -20,8 +20,12 @@ import {
 } from "@/components/ui/table";
 import { DataTablePagination } from "@/components/TablePagination";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation } from "@tanstack/react-query";
+import { User } from "@clerk/nextjs/server";
+import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -42,25 +46,59 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    onRowSelectionChange:setRowSelection,
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      rowSelection
+      rowSelection,
     },
   });
 
-  // console.log(rowSelection);
+  const { getToken } = useAuth();
+  const router = useRouter()
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      const selectedRows = table.getSelectedRowModel().rows;
+
+      Promise.all(
+        selectedRows.map(async (row) => {
+          const userId = (row.original as User).id;
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL}/users/${userId}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        })
+      );
+    },
+    onSuccess: () => {
+      toast.success("User(s) deleted successfully");
+      router.refresh()
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   return (
-    <div className="rounded-md border mb-2">
-      {Object.keys(rowSelection).length > 0 && 
-      <div className='flex justify-end'>
-        <button 
-        className="flex items-center gap-2 bg-red-500 text-white px-2 py-1 text-sm rounded-md m-4 cursor-pointer"
-        >
-         <Trash2 className="w-4 h-4"/>
-         Delete Users(s)
-        </button>  
-      </div>}
+    <div className="rounded-md border">
+      {Object.keys(rowSelection).length > 0 && (
+        <div className="flex justify-end">
+          <button
+            className="flex items-center gap-2 bg-red-500 text-white px-2 py-1 text-sm rounded-md m-4 cursor-pointer"
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+          >
+            <Trash2 className="w-4 h-4" />
+            {mutation.isPending ? "Deleting..." : "Delete User(s)"}
+          </button>
+        </div>
+      )}
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -103,24 +141,6 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
-      {/* <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div> */}
       <DataTablePagination table={table} />
     </div>
   );

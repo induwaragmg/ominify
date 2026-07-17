@@ -15,8 +15,8 @@ const getData = async (): Promise<OrderType[]> => {
     });
     const data = await res.json();
     return data;
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     return [];
   } 
 };

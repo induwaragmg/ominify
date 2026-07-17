@@ -25,7 +25,7 @@ webhookRoute.post("/stripe", async (c) => {
             const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
 
             // TODO: create order
-            // console.log("webhook received", session);
+            console.log("#######################################\n webhook received", session, "\n##################################");
             producer.send("payment.successful", {
                 value: {
                     userId: session.client_reference_id,
