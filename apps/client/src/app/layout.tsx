@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trendlama - Best Clothes",
-  description: "Trendlama is the best place to find the best clothes",
+  title: "ominify - shop future.",
+  description: "ominify is the future of shopping.",
 };
 
 export default function RootLayout({
@@ -32,10 +32,16 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <div className="mx-auto p-4 sm:px-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-6xl">
+          <div >
+            <div className="mx-auto bg-accent-dark width-full">
             <Navbar />
+            </div>
+           <div className="mx-auto p-4 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl"> 
             {children}
+           </div>
+            <div className="mx-auto bg-accent-dark width-full">
             <Footer />
+            </div>
           </div>
           <ToastContainer position="bottom-right" />
         </body>
