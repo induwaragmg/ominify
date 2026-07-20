@@ -40,20 +40,20 @@ const ProductCard = ({ product }: { product: ProductType }) => {
   };
 
   return (
-    <div className="shadow-lg rounded-lg overflow-hidden">
+    <div className="shadow-lg rounded-lg overflow-hidden ">
       {/* IMAGE */}
       <Link href={`/products/${product.id}`}>
-        <div className="relative aspect-2/3">
+        <div className="relative aspect-square ">
           <Image
             src={(product.images as Record<string, string>)?.[productTypes.color] || ""} //put no image placeholder if no image
             alt={product.name}
             fill
-            className="object-cover hover:scale-105 transition-all duration-300"
+            className="object-cover hover:scale-105 transition-all duration-300 h-full"
           />
         </div>
       </Link>
       {/* PRODUCT DETAIL */}
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-4 p-4 bg-surface">
         <h1 className="font-medium">{product.name}</h1>
         <p className="text-sm text-gray-500">{product.shortDescription}</p>
         {/* PRODUCT TYPES */}
@@ -107,7 +107,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           <p className="font-medium">${product.price.toFixed(2)}</p>
           <button
             onClick={handleAddToCart}
-            className="ring-1 ring-gray-200 shadow-lg rounded-md px-2 py-1 text-sm cursor-pointer hover:text-white hover:bg-black transition-all duration-300 flex items-center gap-2"
+            className="ring-1  ring-gray-200 shadow-lg rounded-md px-2 py-1 text-sm cursor-pointer hover:text-white hover:bg-black transition-all duration-300 flex items-center gap-2"
           >
             <ShoppingCart className="w-4 h-4" />
             Add to Cart

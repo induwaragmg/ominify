@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { ToastContainer } from "react-toastify";
+import { Inter, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ToastContainer } from "react-toastify";
+import "./globals.css";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
@@ -30,19 +28,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${inter.className} ${inter.variable} ${geistMono.variable} antialiased bg-[linear-gradient(180deg,#fafafa_0%,#fbfbfb_40%,#fcfcfc_100%)]`}
         >
-          <div >
-            <div className="mx-auto bg-accent-dark width-full">
-            <Navbar />
-            </div>
-           <div className="mx-auto p-4 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl"> 
-            {children}
-           </div>
-            <div className="mx-auto bg-accent-dark width-full">
-            <Footer />
-            </div>
-          </div>
+          {children}
+
           <ToastContainer position="bottom-right" />
         </body>
       </html>

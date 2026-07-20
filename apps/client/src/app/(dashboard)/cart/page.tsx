@@ -92,7 +92,7 @@ const CartPage = () => {
   const { cart, removeFromCart } = useCartStore();
   console.log(cart);
   return (
-    <div className="flex flex-col gap-8 items-center justify-center mt-12">
+    <div className="flex flex-col gap-8 items-center justify-center mt-12 flex-1">
       {/* TITLE */}
       <h1 className="text-2xl font-medium">Your Shopping Cart</h1>
       {/* STEPS */}

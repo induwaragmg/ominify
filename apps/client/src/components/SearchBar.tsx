@@ -18,12 +18,11 @@ const SearchBar = () => {
 
 
   return (
-    <div className='hidden md:flex items-center gap-2 rounded-full ring-1 ring-gray-100 px-2 py-2 shadow-sm bg-white'>
-        <Search className="w-4 h-4 text-brand" />
+    <div className='hidden md:flex flex-1 items-center gap-2 rounded-full ring-1 ring-gray-100 pl-2  shadow-sm bg-white'>
         <input 
           id="search" 
           placeholder="Search..." 
-          className="text-sm outline-0 w-32 md:w-64 lg:w-150 text-brand"
+          className="text-md outline-0 pl-2 w-full min-w-0 text-gray-600 my-2"
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -31,6 +30,9 @@ const SearchBar = () => {
             }
           }}
         />
+        <div className="cursor-pointer bg-brand rounded-full w-12 h-full py-2.5 px-1 flex items-center justify-center" onClick={() => handleSearch(value)}>
+        <Search className="w-4 h-4 text-white" />
+        </div>
     </div>
   )
 }
