@@ -51,7 +51,7 @@ export default function RightSidebar() {
   const total = subtotal - discount + shipping;
 
   return (
-    <aside className="hidden w-90 shrink-0 self-start px-5 py-6 xl:block">
+    <aside className="hidden w-90 shrink-0 self-start px-5 py-3 xl:block">
       <div className="flex flex-col gap-5">
 
         <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -68,10 +68,11 @@ export default function RightSidebar() {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="max-h-35 overflow-y-auto pr-2" >
+          <div className="flex flex-col gap-3" >
             {cart.length === 0 ? (
               <div className="rounded-xl bg-gray-50 px-4 py-8 text-center">
-                <ShoppingBag className="mx-auto mb-3 size-8 text-gray-300" />
+                <ShoppingBag className="mx-auto mb-1 size-8 text-gray-300" />
                 <p className="text-sm font-medium text-gray-900">
                   Your cart is empty
                 </p>
@@ -154,6 +155,7 @@ export default function RightSidebar() {
               ))
             )}
           </div>
+          </div>
 
           <div className="mt-5 flex gap-2">
             <input
@@ -204,7 +206,8 @@ export default function RightSidebar() {
           </button>
         </section>
 
- <section className="overflow-hidden rounded-2xl  bg-linear-to-br from-blue-600 via-blue-500 to-violet-600 p-5 text-white shadow-[0_18px_50px_rgba(37,99,235,0.25)]">
+       
+        <section className="overflow-hidden rounded-2xl  bg-linear-to-br from-blue-600 via-blue-500 to-violet-600 p-5 text-white shadow-[0_18px_50px_rgba(37,99,235,0.25)]">
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">Join Ominify Club</h2>
@@ -224,6 +227,7 @@ export default function RightSidebar() {
             </div>
           </div>
         </section>
+       
         <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-950">

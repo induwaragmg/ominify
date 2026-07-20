@@ -30,8 +30,8 @@ const SearchBar = () => {
             }
           }}
         />
-        <div className="cursor-pointer bg-brand rounded-full w-12 h-full py-2.5 px-1 flex items-center justify-center" onClick={() => handleSearch(value)}>
-        <Search className="w-4 h-4 text-white" />
+        <div className="cursor-pointer bg-brand rounded-full w-12 h-full py-2 px-1 mr-1 flex items-center justify-center" onClick={() => handleSearch(value)}>
+        <Search className="w-4.5 h-4.5 text-white" />
         </div>
     </div>
   )
