@@ -81,7 +81,7 @@ export function AppSidebar() {
               <Link
                 key={item.title}
                 href={item.url}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all text-gray-700 hover:bg-gray-100"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all text-gray-700 hover:bg-gray-200"
               >
                 <item.icon className="w-5 h-5" />
                 <span className="text-sm font-medium flex-1">{item.title}</span>
@@ -97,7 +97,7 @@ export function AppSidebar() {
 
         {/* Special Offer */}
         <SidebarGroup className="">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-xl p-4">
+          <div className="bg-linear-to-br from-brand via-blue-500 to-green-200 text-white rounded-xl p-4">
             <h3 className="font-bold text-lg mb-2">Summer Sale</h3>
             <p className="text-sm mb-3">Up to 50% Off</p>
             <button className="w-full bg-white text-blue-600 font-semibold py-2 rounded-lg text-sm hover:bg-gray-100 transition-colors">

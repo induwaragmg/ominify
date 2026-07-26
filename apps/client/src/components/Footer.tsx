@@ -3,7 +3,7 @@ import Link from "next/link"
 
 const Footer = () => {
   return (
-    <div className="mr-auto flex">
+    <div className="w-full">
       {/* <div className="mt-16 flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-between md:gap-0  p-8 "> */}
       <div className="mt-16 grid flex-1 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-8 p-8">
         <div className="flex flex-col gap-4 items-center md:items-start">

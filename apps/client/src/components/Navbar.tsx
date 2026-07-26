@@ -8,7 +8,7 @@ import ProfileButton from "./ProfileButton";
 
 const Navbar = () => {
   return (
-    <div className="mx-auto px-4 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl">
+    <div className="sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl">
     <div className="w-full flex items-center justify-between gap-4  border-gray-200 py-4">
       {/* Left */}
      
@@ -34,9 +34,17 @@ const Navbar = () => {
         <Show when="signed-out">
         <Link
           href="/sign-in"
-          className="rounded-full bg-brand px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:bg-brand-hover hover:shadow-md"
+          className="min-w-21.5 rounded-full bg-surface ring-1 ring-gray-200 px-5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-300 hover:bg-brand hover:text-white hover:shadow-md"
         >
           Sign In
+        </Link>
+        </Show>
+        <Show when="signed-out">
+        <Link
+          href="/sign-up"
+          className="min-w-23.25 rounded-full bg-brand px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:bg-brand-hover hover:shadow-md"
+        >
+          Sign Up
         </Link>
         </Show>
 

@@ -207,7 +207,7 @@ export default function RightSidebar() {
         </section>
 
        
-        <section className="overflow-hidden rounded-2xl  bg-linear-to-br from-blue-600 via-blue-500 to-violet-600 p-5 text-white shadow-[0_18px_50px_rgba(37,99,235,0.25)]">
+        <section className="overflow-hidden rounded-2xl  bg-linear-to-br from-blue-600 via-blue-500 to-green-200 p-5 text-white shadow-[0_18px_50px_rgba(37,99,235,0.25)]">
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">Join Ominify Club</h2>

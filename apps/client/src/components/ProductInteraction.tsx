@@ -49,23 +49,23 @@ const ProductInteraction = ({
     toast.success("Product added to cart")
   };
   return (
-    <div className="flex flex-col gap-4 mt-4">
+    <div className="flex flex-col gap-4 mt-4 ">
       {/* SIZE */}
       <div className="flex flex-col gap-2 text-xs">
         <span className="text-gray-500">Size</span>
         <div className="flex items-center gap-2">
           {product.sizes.map((size) => (
             <div
-              className={`cursor-pointer border p-0.5 ${
-                selectedSize === size ? "border-gray-600" : "border-gray-300"
+              className={`cursor-pointer border rounded-full  ${
+                selectedSize === size ? " ring-2 ring-gray-400" : "border-gray-300"
               }`}
               key={size}
               onClick={() => handleTypeChange("size", size)}
             >
               <div
-                className={`w-6 h-6 text-center flex items-center justify-center ${
+                className={`w-6 h-6 text-center rounded-full flex items-center justify-center ${
                   selectedSize === size
-                    ? "bg-black text-white"
+                    ? "bg-brand text-white"
                     : "bg-white text-black"
                 }`}
               >
@@ -81,13 +81,13 @@ const ProductInteraction = ({
         <div className="flex items-center gap-2">
           {product.colors.map((color) => (
             <div
-              className={`cursor-pointer border p-0.5 ${
-                selectedColor === color ? "border-gray-300" : "border-white"
+              className={`cursor-pointer rounded-full border  ${
+                selectedColor === color ? "ring-2 ring-gray-400" : "border-white"
               }`}
               key={color}
               onClick={() => handleTypeChange("color", color)}
             >
-              <div className={`w-6 h-6`} style={{ backgroundColor: color }} />
+              <div className={`w-6 h-6`} style={{ backgroundColor: color, borderRadius: "50%" }} />
             </div>
           ))}
         </div>
@@ -97,14 +97,14 @@ const ProductInteraction = ({
         <span className="text-gray-500">Quantity</span>
         <div className="flex items-center gap-2">
           <button
-            className="cursor-pointer border border-gray-300 p-1"
+            className="cursor-pointer border rounded-full border-gray-300 p-1"
             onClick={() => handleQuantityChange("decrement")}
           >
             <Minus className="w-4 h-4" />
           </button>
           <span>{quantity}</span>
           <button
-            className="cursor-pointer border border-gray-300 p-1"
+            className="cursor-pointer border rounded-full border-gray-300 p-1"
             onClick={() => handleQuantityChange("increment")}
           >
             <Plus className="w-4 h-4" />
@@ -112,17 +112,19 @@ const ProductInteraction = ({
         </div>
       </div>
       {/* BUTTONS */}
+     <div className="flex gap-4">
       <button
         onClick={handleAddToCart}
-        className="bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg flex items-center justify-center gap-2 cursor-pointer text-sm font-medium"
+        className="bg-brand flex-1 text-white px-4 py-2 rounded-md shadow-lg flex items-center justify-center gap-2 cursor-pointer text-sm font-medium"
       >
         <Plus className="w-4 h-4" />
         Add to Cart
       </button>
-      <button className="ring-1 ring-gray-400 shadow-lg text-gray-800 px-4 py-2 rounded-md flex items-center justify-center cursor-pointer gap-2 text-sm font-medium">
+      <button className=" flex-1 ring-1 ring-gray-400 shadow-lg text-gray-800 px-4 py-2 rounded-md flex items-center justify-center cursor-pointer gap-2 text-sm font-medium">
         <ShoppingCart className="w-4 h-4" />
         Buy this Item
       </button>
+     </div>
     </div>
   );
 };

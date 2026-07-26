@@ -26,9 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      {/* CHANGE: Make the html element occupy the full viewport height. */}
+      <html lang="en" className="h-full">
+        {/* CHANGE: Make the body occupy at least the full viewport height. */}
         <body
-          className={`${inter.className} ${inter.variable} ${geistMono.variable} antialiased bg-[linear-gradient(180deg,#fafafa_0%,#fbfbfb_40%,#fcfcfc_100%)]`}
+          className={`${inter.className} ${inter.variable} ${geistMono.variable} min-h-screen antialiased bg-[linear-gradient(180deg,#fafafa_0%,#fbfbfb_40%,#fcfcfc_100%)]`}
         >
           {children}
 

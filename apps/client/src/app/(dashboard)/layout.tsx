@@ -1,7 +1,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 export default function DashboardLayout({
   children,
@@ -12,13 +15,24 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
 
-      <div className="mr-8 flex-1 min-w-0">
-        <div className="sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl">
+      {/* CHANGE: Use SidebarInset instead of a custom wrapper. */}
+      <SidebarInset>
+
+        {/* CHANGE: Make the content occupy the available height. */}
+        <div className="flex flex-1 min-w-0 flex-col">
+
           <Navbar />
-          {children}
+
+          {/* CHANGE: Allow dashboard pages to grow. */}
+          <main className="flex-1 min-w-0">
+            {children}
+          </main>
+
           <Footer />
+
         </div>
-      </div>
+
+      </SidebarInset>
     </SidebarProvider>
   );
 }
