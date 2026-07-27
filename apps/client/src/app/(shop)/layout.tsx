@@ -18,26 +18,18 @@ export default function ShopLayout({
 
       {/* CHANGE: Use SidebarInset as the main content wrapper. */}
       <SidebarInset className="bg-[#f8f9fb] pl-2 pr-2 ">
+        <div>
+          <div className="flex flex-1 min-w-0">
 
-        {/* CHANGE: Layout for page content and right sidebar. */}
-        <div className="flex flex-1 min-w-0">
-
-          {/* CHANGE: Main content column. */}
-          <div className="flex flex-1 min-w-0 flex-col ">
-
-            <Navbar />
-
-            {/* CHANGE: Allow page content to grow and shrink correctly. */}
-            <main className="flex-1 min-w-0">
-              {children}
-            </main>
-
-            <Footer />
-
+            <div className="flex flex-1 min-w-0 flex-col ">
+              <Navbar />
+              <main className="flex-1 min-w-0">
+                {children}
+              </main>
+            </div>
+            <RightSidebar />
           </div>
-
-          {/* CHANGE: Right sidebar remains beside the main content. */}
-          <RightSidebar />
+          <Footer />
 
         </div>
 

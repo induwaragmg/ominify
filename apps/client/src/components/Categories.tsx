@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Footprints,
   Glasses,
@@ -9,6 +10,7 @@ import {
   Hand,
   Sparkles,
   Layers,
+  MoreHorizontal,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -63,7 +65,7 @@ const categories = [
   },
 ];
 
-const Categories = () => {
+const Categories = (): JSX.Element => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -83,7 +85,7 @@ const Categories = () => {
 
   return (
     <div className="w-full bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 shadow-sm mb-6">
-      <div className="flex items-center justify-between sm:grid sm:grid-cols-4 md:grid-cols-8 gap-4 overflow-x-auto no-scrollbar py-2">
+      <div className="flex items-center justify-between sm:grid sm:grid-cols-4 md:grid-cols-9 gap-4 overflow-x-auto no-scrollbar py-2">
         {categories.map((category) => {
           const isSelected = selectedCategory === category.slug;
 
@@ -99,10 +101,9 @@ const Categories = () => {
                   w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center 
                   transition-all duration-200 group-hover:scale-105
                   ${category.bgColor}
-                  ${
-                    isSelected
-                      ? "ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-md"
-                      : "border border-transparent"
+                  ${isSelected
+                    ? "ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-md"
+                    : "border border-transparent"
                   }
                 `}
               >
@@ -111,17 +112,29 @@ const Categories = () => {
 
               {/* CATEGORY LABEL */}
               <span
-                className={`text-xs sm:text-sm font-medium transition-colors text-center ${
-                  isSelected
+                className={`text-xs sm:text-sm font-medium transition-colors text-center ${isSelected
                     ? "text-gray-900 font-semibold"
                     : "text-gray-600 group-hover:text-gray-900"
-                }`}
+                  }`}
               >
                 {category.name}
               </span>
             </div>
           );
         })}
+
+        {/* MORE — links to full categories page */}
+        <Link
+          href="/categories"
+          className="flex flex-col items-center gap-2.5 group shrink-0 select-none"
+        >
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-200 group-hover:scale-105 bg-gray-100 text-gray-500 group-hover:bg-gray-200 border border-transparent">
+            <MoreHorizontal className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
+          </div>
+          <span className="text-xs sm:text-sm font-medium text-gray-500 transition-colors group-hover:text-gray-900 text-center">
+            More
+          </span>
+        </Link>
       </div>
     </div>
   );
