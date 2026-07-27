@@ -175,7 +175,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       />
 
       {/* DARK GRADIENT */}
-      <div className="absolute inset-0 bg-linear-to-t from-brand/95 via-black/30 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-brand/50 via-black/30 to-transparent" />
 
       {/* TOP BADGES */}
       <div className="absolute left-4 right-4 top-4 flex items-center justify-between">

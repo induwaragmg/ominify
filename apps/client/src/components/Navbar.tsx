@@ -10,8 +10,8 @@ const Navbar = (): JSX.Element => {
   return (
     <div className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl">
       <div className="w-full flex items-center justify-between gap-3 border-gray-200 py-4">
-        {/* Left: Mobile sidebar trigger */}
-        <SidebarTrigger className="md:hidden h-10 w-10 shrink-0 rounded-full bg-white text-gray-500 shadow-sm" />
+        {/* Left: Mobile sidebar trigger matching exact 40px circle & 20px icon size */}
+        <SidebarTrigger className="md:hidden h-10 w-10 shrink-0 rounded-full bg-white text-gray-500 hover:text-gray-900 shadow-sm p-0 flex items-center justify-center [&_svg]:size-5 [&_svg]:h-5 [&_svg]:w-5" />
 
         {/* Center: Search Bar */}
         <SearchBar />
@@ -49,14 +49,14 @@ const Navbar = (): JSX.Element => {
             </Link>
           </Show>
 
-          <Show when="signed-out">
+          {/* <Show when="signed-out">
             <Link
               href="/sign-up"
               className="flex shrink-0 items-center justify-center rounded-full bg-brand px-4 py-2 text-sm font-medium text-white shadow-xs transition hover:bg-brand-hover"
             >
               Sign Up
             </Link>
-          </Show>
+          </Show> */}
 
           {/* Signed-in User Profile */}
           <Show when="signed-in">

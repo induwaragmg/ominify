@@ -225,7 +225,7 @@ const ProductList = async ({
           <div
             className="
               grid
-              gap-8
+              gap-4
               grid-cols-[repeat(auto-fit,minmax(250px,1fr))]
             "
           > 
