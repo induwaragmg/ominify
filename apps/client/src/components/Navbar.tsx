@@ -5,6 +5,7 @@ import { Bell, Home, ShoppingCart } from "lucide-react";
 import ShoppingCartIcon from "./ShoppingCartIcon";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import ProfileButton from "./ProfileButton";
+import { SidebarTrigger } from "./ui/sidebar";
 
 const Navbar = () => {
   return (
@@ -22,6 +23,7 @@ const Navbar = () => {
         />
       </Link> */}
       {/* Right */}
+        <SidebarTrigger className="md:hidden h-10 w-10 shrink-0 rounded-full bg-white text-gray-500 shadow-sm" />
         <SearchBar  />
       <div className="flex items-center gap-4">
         <Link href="/">

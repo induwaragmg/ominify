@@ -61,7 +61,7 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar className="w-56 bg-white border-r">
+    <Sidebar variant="floating" className=" bg-[#f8f9fb] py-3 pl-3">
       <SidebarHeader className="px-4 py-6">
          <Link href="/" className="flex items-center h-12">
         <Image

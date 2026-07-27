@@ -58,7 +58,7 @@ const ShippingForm = ({
       className="flex flex-col gap-4"
       onSubmit={handleSubmit(handleShippingForm)}
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <label htmlFor="name" className="text-xs text-gray-500 font-medium">
           Name
         </label>
@@ -137,7 +137,7 @@ const ShippingForm = ({
       </div>
       <button
         type="submit"
-        className="w-full bg-gray-800 hover:bg-gray-900 transition-all duration-300 text-white p-2 rounded-lg cursor-pointer flex items-center justify-center gap-2"
+        className="w-full bg-brand hover:bg-brand/90 transition-all duration-300 text-white p-2 rounded-lg cursor-pointer flex items-center justify-center gap-2"
       >
         Continue
         <ArrowRight className="w-3 h-3" />

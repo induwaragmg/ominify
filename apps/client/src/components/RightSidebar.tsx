@@ -51,8 +51,8 @@ export default function RightSidebar() {
   const total = subtotal - discount + shipping;
 
   return (
-    <aside className="hidden w-90 shrink-0 self-start px-5 py-3 xl:block">
-      <div className="flex flex-col gap-5">
+    <aside className="hidden w-90 shrink-0 self-start pl-4 pr-2 py-3 xl:block">
+      <div className="flex flex-col gap-4">
 
         <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
           <div className="mb-5 flex items-center justify-between">

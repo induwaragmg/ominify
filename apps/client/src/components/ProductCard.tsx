@@ -1,11 +1,13 @@
 "use client";
 
 import useCartStore from "@/stores/cartStore";
+import useWishlistStore from "@/stores/wishlistStore";
+import { useAuth } from "@clerk/nextjs";
 import { ProductType } from "@repo/types";
 import { Heart, Plus, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 const ProductCard = ({ product }: { product: ProductType }) => {
@@ -15,6 +17,21 @@ const ProductCard = ({ product }: { product: ProductType }) => {
   });
 
   const { addToCart } = useCartStore();
+  const { getToken, isSignedIn } = useAuth();
+  const { fetchWishlist, productIds, toggleWishlist } = useWishlistStore();
+  const isWishlisted = productIds.includes(product.id);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      return;
+    }
+
+    getToken().then((token) => {
+      if (token) {
+        fetchWishlist(token);
+      }
+    });
+  }, [fetchWishlist, getToken, isSignedIn]);
 
   const handleProductType = ({
     type,
@@ -37,6 +54,30 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       selectedColor: productTypes.color,
     });
     toast.success("Product added to cart")
+  };
+
+  const handleWishlist = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isSignedIn) {
+      toast.error("Please sign in to use wishlist");
+      return;
+    }
+
+    const token = await getToken();
+
+    if (!token) {
+      toast.error("Please sign in to use wishlist");
+      return;
+    }
+
+    try {
+      await toggleWishlist(product, token);
+      toast.success(isWishlisted ? "Removed from wishlist" : "Added to wishlist");
+    } catch {
+      toast.error("Could not update wishlist");
+    }
   };
 
   return (
@@ -134,7 +175,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       />
 
       {/* DARK GRADIENT */}
-      <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/30 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-brand/95 via-black/30 to-transparent" />
 
       {/* TOP BADGES */}
       <div className="absolute left-4 right-4 top-4 flex items-center justify-between">
@@ -142,9 +183,17 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           🚚 2–3 Days
         </div> */}
 
-        <div className="rounded-full bg-white/10 px-2 py-2 text-xs text-white backdrop-blur-md">
-          <Heart className="h-4 w-4" />
-        </div>
+        <button
+          onClick={handleWishlist}
+          className="z-20 rounded-full bg-white/10 px-2 py-2 text-xs text-white backdrop-blur-md transition hover:bg-white/20"
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart
+            className={`h-4 w-4 ${
+              isWishlisted ? "fill-white text-white" : ""
+            }`}
+          />
+        </button>
       </div>
 
       {/* CONTENT */}

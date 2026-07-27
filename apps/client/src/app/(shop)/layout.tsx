@@ -13,17 +13,17 @@ export default function ShopLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="">
       <AppSidebar />
 
       {/* CHANGE: Use SidebarInset as the main content wrapper. */}
-      <SidebarInset>
+      <SidebarInset className="bg-[#f8f9fb] pl-2 pr-2 ">
 
         {/* CHANGE: Layout for page content and right sidebar. */}
         <div className="flex flex-1 min-w-0">
 
           {/* CHANGE: Main content column. */}
-          <div className="flex flex-1 min-w-0 flex-col">
+          <div className="flex flex-1 min-w-0 flex-col ">
 
             <Navbar />
 

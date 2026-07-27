@@ -49,15 +49,18 @@ const CheckoutForm = ({shippingForm}: {shippingForm: ShippingFormInputs}) => {
 
   return (
     <form>
-      <PaymentElement options={{layout: 'accordion'}}/>
-      <div>
-      {/* <button disabled={!checkout.canConfirm || loading} onClick={handleClick}  */}
-      <button disabled={loading} onClick={handleClick} 
-      className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:cursor-pointer" >
-        Pay
-      </button>
-      {error && <div>{error}</div>}
-    </div>
+      <PaymentElement options={{ layout: "accordion" }} />
+      <div className="flex justify-end">
+        {/* <button disabled={!checkout.canConfirm || loading} onClick={handleClick}  */}
+        <button
+          disabled={loading}
+          onClick={handleClick}
+          className="bg-blue-500 my-3 w-full justify-center rounded-full text-white px-4 py-3 mt-4 hover:cursor-pointer"
+        >
+          Pay
+        </button>
+        {error && <div>{error}</div>}
+      </div>
     </form>
   );
 }

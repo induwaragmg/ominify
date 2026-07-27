@@ -16,10 +16,10 @@ export default function DashboardLayout({
       <AppSidebar />
 
       {/* CHANGE: Use SidebarInset instead of a custom wrapper. */}
-      <SidebarInset>
+      <SidebarInset className="bg-[#f8f9fb] pl-2 pr-3">
 
         {/* CHANGE: Make the content occupy the available height. */}
-        <div className="flex flex-1 min-w-0 flex-col">
+        <div className="flex flex-1 flex-col">
 
           <Navbar />
 
