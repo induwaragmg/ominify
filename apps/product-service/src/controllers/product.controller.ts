@@ -59,35 +59,51 @@ export const deleteProduct = async ( req: Request, res: Response ) => {
 };
 
 export const getProducts = async ( req: Request, res: Response ) => {
-  const { sort, category, search, limit } = req.query;  //value after sth ?sort= .... is gotten by req.query
+  const { sort, category, search, limit } = req.query;
 
   const orderBy = (() => {
     switch (sort) {
       case "asc":
         return { price: Prisma.SortOrder.asc };
-        break;
       case "desc":
         return { price: Prisma.SortOrder.desc };
-        break;
       case "oldest":
         return { createdAt: Prisma.SortOrder.asc };
-        break;
       default:
         return { createdAt: Prisma.SortOrder.desc };
-        break;
     }
   })();
 
+  const where: Prisma.ProductWhereInput = {};
+
+  if (category && typeof category === "string") {
+    where.categorySlug = category;
+  }
+
+  if (search && typeof search === "string" && search.trim() !== "") {
+    const searchStr = search.trim();
+    const searchNormalized =
+      searchStr.endsWith("s") && searchStr.length > 3
+        ? searchStr.slice(0, -1)
+        : searchStr;
+    const searchNoHyphen = searchStr.replace(/-/g, " ");
+
+    const terms = Array.from(
+      new Set([searchStr, searchNormalized, searchNoHyphen])
+    ).filter(Boolean);
+
+    where.OR = terms.flatMap((term) => [
+      { name: { contains: term, mode: "insensitive" } },
+      { shortDescription: { contains: term, mode: "insensitive" } },
+      { description: { contains: term, mode: "insensitive" } },
+      { categorySlug: { contains: term, mode: "insensitive" } },
+      { category: { is: { name: { contains: term, mode: "insensitive" } } } },
+      { category: { is: { slug: { contains: term, mode: "insensitive" } } } },
+    ]);
+  }
+
   const products = await prisma.product.findMany({
-    where: {
-      category: {
-        slug: category as string,
-      },
-      name: {
-        contains: search as string,
-        mode: "insensitive",
-      },
-    },
+    where,
     orderBy,
     take: limit ? Number(limit) : undefined,
   });

@@ -11,19 +11,15 @@ import {
   Home,
   ShoppingBag,
   Zap,
-  Sparkles,
-  Crown,
-  Grid,
   Package,
   Heart,
-  Ticket,
-  MapPin,
   Settings,
   HelpCircle,
   Moon,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 const items = [
   {
@@ -53,13 +49,15 @@ const items = [
     icon: Heart,
   },
   {
-    title: "Account Settings",
+    title: "Settings",
     url: "/account",
     icon: Settings,
   },
 ]
 
-export function AppSidebar() {
+export function AppSidebar(): JSX.Element {
+  const pathname = usePathname()
+
   return (
     <Sidebar variant="floating" className=" bg-[#f8f9fb] py-3 pl-3">
       <SidebarHeader className="px-4 py-6">
@@ -77,21 +75,38 @@ export function AppSidebar() {
       <SidebarContent className="px-2">
         <SidebarGroup>
           <div className="space-y-2">
-            {items.map((item) => (
-              <Link
-                key={item.title}
-                href={item.url}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all text-gray-700 hover:bg-gray-200"
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-sm font-medium flex-1">{item.title}</span>
-                {item.badge && (
-                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
+            {items.map((item) => {
+              const isActive =
+                item.url === "/"
+                  ? pathname === "/"
+                  : pathname === item.url || pathname.startsWith(`${item.url}/`)
+
+              return (
+                <Link
+                  key={item.title}
+                  href={item.url}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${
+                    isActive
+                      ? "bg-brand text-white font-semibold shadow-xs"
+                      : "text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-500"}`} />
+                  <span className="text-sm font-bold flex-1">{item.title}</span>
+                  {item.badge && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        isActive
+                          ? "bg-white text-brand"
+                          : "bg-blue-600 text-white"
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
           </div>
         </SidebarGroup>
 
