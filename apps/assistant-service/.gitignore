@@ -1,0 +1,35 @@
+# Python Bytecode and C extensions
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables & API Secrets (Clerk, Gemini, Database URLs)
+.env
+.env.*
+secrets.json
+
+# uv, Poetry, & Dependency Managers
+.uv/
+.python-version
+.venv/
+env/
+venv/
+
+# Database Files (Local SQLite & Alembic temporary files)
+*.db
+*.sqlite
+*.sqlite3
+alembic.ini
+
+# Testing & Coverage (Pytest)
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor & System Files
+.vscode/
+.idea/
+.DS_Store
+*.swp
