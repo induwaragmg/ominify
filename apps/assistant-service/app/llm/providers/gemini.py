@@ -1,18 +1,17 @@
 """
 Google Gemini LLM provider implementation using official google-genai SDK.
-Features latency tracking, token usage metrics logging, and domain exception handling.
+Features latency tracking, token usage metrics logging, native content streaming, and domain exception handling.
 """
 
 import logging
 import time
-from typing import Any, List, Dict, Optional
+from typing import Any, AsyncGenerator, List, Dict, Optional
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
 from app.llm.providers.base import LLMProvider
 from app.core.config import settings
-from app.core.exceptions import LLMUnavailableError
 
 logger = logging.getLogger("assistant-service.llm")
 
@@ -21,7 +20,7 @@ class GeminiProvider(LLMProvider):
     """
     Official Google Gemini provider implementation using google-genai SDK.
     Handles client initialization, model completion, native tool definition registration,
-    structured function call extraction, latency metrics, token usage tracking, and error handling.
+    structured function call extraction, native response streaming, latency metrics, token usage tracking, and error handling.
     """
 
     def __init__(
@@ -91,7 +90,6 @@ class GeminiProvider(LLMProvider):
 
             latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-            # Extract token usage metrics if available from Gemini response
             token_usage = {}
             if hasattr(response, "usage_metadata") and response.usage_metadata:
                 um = response.usage_metadata
@@ -155,9 +153,39 @@ class GeminiProvider(LLMProvider):
 
     async def stream_response(
         self,
-        messages: List[Any],
+        messages: List[types.Content],
         system_prompt: Optional[str] = None,
         tools: Optional[List[types.Tool]] = None,
-    ):
-        """Placeholder for SSE streaming in Phase 4."""
-        raise NotImplementedError("Streaming is scheduled for Phase 4.")
+    ) -> AsyncGenerator[str, None]:
+        """
+        Streams native LLM response chunks using official google-genai SDK generate_content_stream.
+        Yields text chunk strings as they arrive from Gemini.
+        """
+        if not self.client:
+            yield "I am your Ominify AI Shopping Assistant! I can help you search products and find recommendations."
+            return
+
+        logger.info("Gemini stream request started (model: %s)", self.model_name)
+
+        try:
+            config_kwargs: Dict[str, Any] = {}
+            if system_prompt:
+                config_kwargs["system_instruction"] = system_prompt
+            if tools:
+                config_kwargs["tools"] = tools
+
+            config = types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
+
+            stream_response = self.client.models.generate_content_stream(
+                model=self.model_name,
+                contents=messages,
+                config=config,
+            )
+
+            for chunk in stream_response:
+                if hasattr(chunk, "text") and chunk.text:
+                    yield chunk.text
+
+        except Exception as e:
+            logger.error("Error during Gemini native stream response: %s", str(e))
+            yield f"\n[Streaming error: {str(e)}]"

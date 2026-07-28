@@ -2,8 +2,9 @@
 Business logic service implementation for Message management and AI response orchestration.
 """
 
+import json
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from fastapi import HTTPException, status
 from app.repositories.message_repository import MessageRepository
 from app.repositories.conversation_repository import ConversationRepository
@@ -115,6 +116,63 @@ class MessageService:
         # Touch conversation updated_at timestamp for non-user posts
         await self.conversation_repo.update_timestamp(conversation_id)
         return user_msg
+
+    async def create_message_stream(
+        self,
+        conversation_id: uuid.UUID,
+        user_id: str,
+        user_message_text: str,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Streams SSE events from AI orchestrator and persists the final assistant message upon completion.
+        """
+        raw_conversation = await self.conversation_repo.get_raw_by_id(conversation_id)
+        if not raw_conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation '{conversation_id}' not found",
+            )
+
+        if raw_conversation.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Conversation belongs to another user",
+            )
+
+        history_messages = await self.message_repo.list_by_conversation(conversation_id)
+
+        # Persist user message entry
+        await self.message_repo.create(
+            conversation_id=conversation_id,
+            role="user",
+            content=[{"type": "text", "text": user_message_text.strip()}],
+        )
+
+        final_content_blocks = []
+
+        async for sse_event in self.orchestrator.stream_message(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            user_message=user_message_text,
+            history_messages=history_messages,
+        ):
+            if "event: completed" in sse_event:
+                try:
+                    data_str = sse_event.split("data: ")[1].strip()
+                    payload = json.loads(data_str)
+                    final_content_blocks = payload.get("content_blocks", [])
+                except Exception:
+                    pass
+
+            yield sse_event
+
+        if final_content_blocks:
+            await self.message_repo.create(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=final_content_blocks,
+            )
+            await self.conversation_repo.update_timestamp(conversation_id)
 
     async def list_messages(
         self,

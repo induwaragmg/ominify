@@ -1,10 +1,11 @@
 """
-REST API routes for Message management.
+REST API routes for Message management and Server-Sent Events (SSE) streaming.
 """
 
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.database import get_db
@@ -48,6 +49,26 @@ async def create_message(
         content=payload.content,
     )
     return MessageResponse.model_validate(message)
+
+
+@router.post(
+    "/stream",
+    summary="Stream AI Assistant Response (SSE)",
+    description="Streams Server-Sent Events (text/event-stream) for thinking, tool execution, and native LLM chunks.",
+)
+async def create_message_stream(
+    conversation_id: uuid.UUID,
+    payload: MessageCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: MessageService = Depends(get_message_service),
+) -> StreamingResponse:
+    user_text = payload.content if isinstance(payload.content, str) else str(payload.content)
+    generator = service.create_message_stream(
+        conversation_id=conversation_id,
+        user_id=current_user.user_id,
+        user_message_text=user_text,
+    )
+    return StreamingResponse(generator, media_type="text/event-stream")
 
 
 @router.get(
