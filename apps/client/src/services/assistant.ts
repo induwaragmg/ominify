@@ -1,22 +1,26 @@
 // ─── Assistant Service API Client ────────────────────────────────────────────
-// Service client module abstracting HTTP API communication with the upcoming
-// `assistant-service` microservice (defaulting to http://localhost:8004).
+// Service client module for HTTP API communication with the assistant-service
+// microservice (defaulting to http://localhost:8004).
 //
 // All functions return typed Promises, throw typed errors (AssistantApiError,
 // AssistantNetworkError, AssistantAbortError), and support AbortSignal cancellation.
-// Currently returns temporary placeholder responses until the backend API is live.
+// Uses Clerk JWT token for authenticated requests via Authorization header.
 
 import type {
+  BackendConversationListResponse,
+  BackendConversationResponse,
+  BackendMessageListResponse,
+  BackendMessageResponse,
   Conversation,
   ConversationWithMessages,
   CreateConversationRequest,
   CreateConversationResponse,
-  GetConversationsParams,
   Message,
+  MessageContentBlock,
+  ParsedSSEEvent,
   QuickAction,
   RequestOptions,
   SendMessageRequest,
-  SendMessageResponse,
 } from "@/types/assistant";
 import {
   AssistantAbortError,
@@ -29,28 +33,19 @@ import {
 const ASSISTANT_SERVICE_URL =
   process.env.NEXT_PUBLIC_ASSISTANT_SERVICE_URL ?? "http://localhost:8004";
 
+const API_V1 = `${ASSISTANT_SERVICE_URL}/api/v1`;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function uid(): string {
-  return crypto.randomUUID();
-}
-
-/** Simulates network latency while respecting AbortSignal cancellation. */
-function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      return reject(new AssistantAbortError());
-    }
-
-    const timer = setTimeout(() => {
-      resolve();
-    }, ms);
-
-    signal?.addEventListener("abort", () => {
-      clearTimeout(timer);
-      reject(new AssistantAbortError());
-    });
-  });
+/** Build headers including optional Clerk JWT Bearer token. */
+function buildHeaders(token?: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 /** Handles errors and wraps unknown failures into typed AssistantErrors. */
@@ -65,196 +60,205 @@ function handleServiceError(error: unknown): never {
   if (error instanceof Error && error.name === "AbortError") {
     throw new AssistantAbortError();
   }
+  if (error instanceof TypeError && error.message.includes("fetch")) {
+    throw new AssistantNetworkError(
+      "Cannot connect to Assistant Service. Is it running on port 8004?"
+    );
+  }
   throw new AssistantApiError(
     error instanceof Error ? error.message : "Unexpected assistant service error"
   );
 }
 
-// ─── Temporary Placeholder Generator ─────────────────────────────────────────
-
-function buildPlaceholderReply(
-  conversationId: string,
-  userText: string
-): Message {
-  const lower = userText.toLowerCase();
-
-  if (
-    lower.includes("drill") ||
-    lower.includes("find") ||
-    lower.includes("product") ||
-    lower.includes("recommend")
-  ) {
-    return {
-      id: uid(),
-      conversationId,
-      role: "assistant",
-      status: "sent",
-      content: [
-        {
-          type: "text",
-          text: "I found some top-rated recommendations based on your needs:",
-        },
-        {
-          type: "product_recommendations",
-          products: [
-            {
-              id: 1,
-              name: "DeWalt 20V MAX Cordless Drill",
-              price: 9999,
-              shortDescription:
-                "Compact, lightweight drill driver with LED light and 2-speed transmission.",
-              description: "High performance cordless drill.",
-              images: { Yellow: "/products/1g.png" },
-              sizes: ["Standard"],
-              colors: ["Yellow"],
-              categorySlug: "tools",
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              rating: 4.8,
-              reviewCount: 2341,
-            },
-            {
-              id: 2,
-              name: "Bosch Professional Impact Drill",
-              price: 12999,
-              shortDescription:
-                "Heavy-duty impact drill with 800W motor and auxiliary handle.",
-              description: "Professional grade impact driver.",
-              images: { Blue: "/products/2w.png" },
-              sizes: ["Standard"],
-              colors: ["Blue"],
-              categorySlug: "tools",
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              rating: 4.6,
-              reviewCount: 1892,
-            },
-          ],
-        },
-      ],
-      createdAt: new Date(),
-    };
+/** Parse backend response and throw on non-OK status. */
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || body.message || detail;
+    } catch {
+      // ignore parse errors on error responses
+    }
+    throw new AssistantApiError(detail, response.status);
   }
+  return response.json() as Promise<T>;
+}
 
-  if (lower.includes("budget") || lower.includes("cheap") || lower.includes("under")) {
-    return {
-      id: uid(),
-      conversationId,
-      role: "assistant",
-      status: "sent",
-      content: [
-        {
-          type: "text",
-          text: "I can help you filter products by price range! What is your budget ceiling and target category?",
-        },
-      ],
-      createdAt: new Date(),
-    };
-  }
+// ─── Response Mappers (snake_case → camelCase) ───────────────────────────────
 
-  if (lower.includes("compare")) {
-    return {
-      id: uid(),
-      conversationId,
-      role: "assistant",
-      status: "sent",
-      content: [
-        {
-          type: "text",
-          text: "Which products would you like to compare side-by-side?",
-        },
-      ],
-      createdAt: new Date(),
-    };
-  }
-
+function mapBackendConversation(raw: BackendConversationResponse): Conversation {
   return {
-    id: uid(),
-    conversationId,
-    role: "assistant",
-    status: "sent",
-    content: [
-      {
-        type: "text",
-        text: "I am your Ominify AI Shopping Assistant. How can I assist your product search or order today?",
-      },
-    ],
-    createdAt: new Date(),
+    id: raw.id,
+    title: raw.title,
+    status: "active",
+    createdAt: new Date(raw.created_at),
+    updatedAt: new Date(raw.updated_at),
   };
+}
+
+function mapBackendMessage(raw: BackendMessageResponse): Message {
+  return {
+    id: raw.id,
+    conversationId: raw.conversation_id,
+    role: raw.role as Message["role"],
+    content: raw.content as MessageContentBlock[],
+    status: "sent",
+    createdAt: new Date(raw.created_at),
+  };
+}
+
+// ─── SSE Stream Parser ──────────────────────────────────────────────────────
+
+/**
+ * Opens a fetch-based SSE connection to the streaming endpoint.
+ * Yields ParsedSSEEvent objects for each server-sent event.
+ */
+export async function* streamSSE(
+  conversationId: string,
+  content: string,
+  options?: RequestOptions,
+): AsyncGenerator<ParsedSSEEvent, void, unknown> {
+  const url = `${API_V1}/conversations/${conversationId}/messages/stream`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: buildHeaders(options?.token),
+      body: JSON.stringify({ role: "user", content }),
+      signal: options?.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new AssistantAbortError();
+    }
+    throw new AssistantNetworkError(
+      "Cannot connect to Assistant Service for streaming"
+    );
+  }
+
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || body.message || detail;
+    } catch {
+      // ignore parse errors
+    }
+    throw new AssistantApiError(detail, response.status);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new AssistantNetworkError("No readable stream in SSE response");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by double newlines
+      const events = buffer.split("\n\n");
+      // Keep the last (possibly incomplete) chunk in the buffer
+      buffer = events.pop() ?? "";
+
+      for (const eventBlock of events) {
+        if (!eventBlock.trim()) continue;
+
+        let eventType = "";
+        let dataStr = "";
+
+        for (const line of eventBlock.split("\n")) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
+        }
+
+        if (eventType && dataStr) {
+          try {
+            const data = JSON.parse(dataStr);
+            yield { event: eventType, data };
+          } catch {
+            // Skip malformed JSON
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 // ─── Public API Client Methods ───────────────────────────────────────────────
 
 /**
  * Fetch recent conversations.
- * Backend contract: GET /conversations
+ * Backend: GET /api/v1/conversations
  */
 export async function getConversations(
-  params?: GetConversationsParams,
-  options?: RequestOptions
+  params?: { limit?: number; offset?: number },
+  options?: RequestOptions,
 ): Promise<Conversation[]> {
-  void ASSISTANT_SERVICE_URL;
-  void params;
-
   try {
-    await delay(300, options?.signal);
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", String(params.limit));
+    if (params?.offset) queryParams.set("offset", String(params.offset));
 
-    return [
-      {
-        id: "conv-1",
-        title: "Buying a Drill",
-        status: "active",
-        createdAt: new Date(Date.now() - 86_400_000),
-        updatedAt: new Date(Date.now() - 86_400_000),
-      },
-      {
-        id: "conv-2",
-        title: "Running Shoes",
-        status: "active",
-        createdAt: new Date(Date.now() - 172_800_000),
-        updatedAt: new Date(Date.now() - 172_800_000),
-      },
-    ];
+    const qs = queryParams.toString();
+    const url = `${API_V1}/conversations${qs ? `?${qs}` : ""}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: buildHeaders(options?.token),
+      signal: options?.signal,
+    });
+
+    const data = await parseResponse<BackendConversationListResponse>(response);
+    return data.conversations.map(mapBackendConversation);
   } catch (error) {
     return handleServiceError(error);
   }
 }
 
 /**
- * Fetch a single conversation with messages.
- * Backend contract: GET /conversations/:id
+ * Fetch a single conversation with its messages.
+ * Backend: GET /api/v1/conversations/:id + GET /api/v1/conversations/:id/messages
  */
 export async function getConversation(
   conversationId: string,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<ConversationWithMessages> {
-  void ASSISTANT_SERVICE_URL;
-
   try {
-    await delay(400, options?.signal);
+    // Fetch conversation details and messages in parallel
+    const [convResponse, msgsResponse] = await Promise.all([
+      fetch(`${API_V1}/conversations/${conversationId}`, {
+        method: "GET",
+        headers: buildHeaders(options?.token),
+        signal: options?.signal,
+      }),
+      fetch(`${API_V1}/conversations/${conversationId}/messages`, {
+        method: "GET",
+        headers: buildHeaders(options?.token),
+        signal: options?.signal,
+      }),
+    ]);
 
-    return {
-      id: conversationId,
-      title: conversationId === "conv-1" ? "Buying a Drill" : "Product Inquiry",
-      status: "active",
-      createdAt: new Date(Date.now() - 86_400_000),
-      updatedAt: new Date(),
-      messages: [
-        {
-          id: uid(),
-          conversationId,
-          role: "assistant",
-          status: "sent",
-          content: [
-            {
-              type: "text",
-              text: "Hello! 👋 How can I help you find the right items today?",
-            },
-          ],
-          createdAt: new Date(Date.now() - 86_400_000),
-        },
-      ],
-    };
+    const convData = await parseResponse<BackendConversationResponse>(convResponse);
+    const msgsData = await parseResponse<BackendMessageListResponse>(msgsResponse);
+
+    const conversation = mapBackendConversation(convData);
+    const messages = msgsData.messages.map(mapBackendMessage);
+
+    return { ...conversation, messages };
   } catch (error) {
     return handleServiceError(error);
   }
@@ -262,60 +266,34 @@ export async function getConversation(
 
 /**
  * Create a new conversation.
- * Backend contract: POST /conversations
+ * Backend: POST /api/v1/conversations
+ *
+ * If `initialMessage` is provided, the first user message is sent via
+ * the store's sendMessage flow (SSE streaming) after conversation creation.
+ * This function only creates the conversation and returns the welcome state.
  */
 export async function createConversation(
   request: CreateConversationRequest,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<CreateConversationResponse> {
-  void ASSISTANT_SERVICE_URL;
-
   try {
-    await delay(450, options?.signal);
+    const title = request.initialMessage
+      ? request.initialMessage.slice(0, 40) + (request.initialMessage.length > 40 ? "..." : "")
+      : undefined;
 
-    const conversationId = uid();
-    const messages: Message[] = [
-      {
-        id: uid(),
-        conversationId,
-        role: "assistant",
-        status: "sent",
-        content: [
-          {
-            type: "text",
-            text: "Hello! 👋 How can I assist you with your shopping today?",
-          },
-        ],
-        createdAt: new Date(),
-      },
-    ];
+    const response = await fetch(`${API_V1}/conversations`, {
+      method: "POST",
+      headers: buildHeaders(options?.token),
+      body: JSON.stringify({ title }),
+      signal: options?.signal,
+    });
 
-    if (request.initialMessage) {
-      messages.push({
-        id: uid(),
-        conversationId,
-        role: "user",
-        status: "sent",
-        content: [{ type: "text", text: request.initialMessage }],
-        createdAt: new Date(),
-      });
-
-      const assistantReply = buildPlaceholderReply(
-        conversationId,
-        request.initialMessage
-      );
-      messages.push(assistantReply);
-    }
+    const convData = await parseResponse<BackendConversationResponse>(response);
+    const conversation = mapBackendConversation(convData);
 
     return {
-      conversation: {
-        id: conversationId,
-        title: request.initialMessage?.slice(0, 40) || "New Chat",
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      messages,
+      conversation,
+      messages: [], // Messages will be populated via SSE streaming
     };
   } catch (error) {
     return handleServiceError(error);
@@ -323,31 +301,36 @@ export async function createConversation(
 }
 
 /**
- * Send a message within a conversation.
- * Backend contract: POST /conversations/:id/messages
+ * Send a message within a conversation (non-streaming REST fallback).
+ * Backend: POST /api/v1/conversations/:id/messages
  */
 export async function sendMessage(
   request: SendMessageRequest,
-  options?: RequestOptions
-): Promise<SendMessageResponse> {
-  void ASSISTANT_SERVICE_URL;
-
+  options?: RequestOptions,
+): Promise<{ userMessage: Message; assistantMessage: Message }> {
   try {
+    const response = await fetch(
+      `${API_V1}/conversations/${request.conversationId}/messages`,
+      {
+        method: "POST",
+        headers: buildHeaders(options?.token),
+        body: JSON.stringify({ role: "user", content: request.content }),
+        signal: options?.signal,
+      },
+    );
+
+    const data = await parseResponse<BackendMessageResponse>(response);
+    const assistantMessage = mapBackendMessage(data);
+
+    // The backend returns only the assistant message; construct user message locally
     const userMessage: Message = {
-      id: uid(),
+      id: crypto.randomUUID(),
       conversationId: request.conversationId,
       role: "user",
       status: "sent",
       content: [{ type: "text", text: request.content }],
       createdAt: new Date(),
     };
-
-    await delay(600, options?.signal);
-
-    const assistantMessage = buildPlaceholderReply(
-      request.conversationId,
-      request.content
-    );
 
     return { userMessage, assistantMessage };
   } catch (error) {
@@ -357,64 +340,76 @@ export async function sendMessage(
 
 /**
  * Delete a conversation.
- * Backend contract: DELETE /conversations/:id
+ * Backend: DELETE /api/v1/conversations/:id
  */
 export async function deleteConversation(
   conversationId: string,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<void> {
-  void ASSISTANT_SERVICE_URL;
-
   try {
-    await delay(200, options?.signal);
+    const response = await fetch(
+      `${API_V1}/conversations/${conversationId}`,
+      {
+        method: "DELETE",
+        headers: buildHeaders(options?.token),
+        signal: options?.signal,
+      },
+    );
+
+    if (!response.ok && response.status !== 204) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        detail = body.detail || body.message || detail;
+      } catch {
+        // ignore
+      }
+      throw new AssistantApiError(detail, response.status);
+    }
   } catch (error) {
+    if (error instanceof AssistantApiError) throw error;
     return handleServiceError(error);
   }
 }
 
 /**
  * Fetch available quick actions.
- * Backend contract: GET /quick-actions
+ * These are defined client-side (no backend endpoint).
  */
 export async function getQuickActions(
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<QuickAction[]> {
-  try {
-    await delay(150, options?.signal);
-
-    return [
-      {
-        id: "find",
-        label: "Find the right product",
-        icon: "🔍",
-        prompt: "Help me find the right product",
-      },
-      {
-        id: "compare",
-        label: "Compare products",
-        icon: "⚖️",
-        prompt: "I want to compare products",
-      },
-      {
-        id: "budget",
-        label: "Shop within my budget",
-        icon: "💰",
-        prompt: "Help me shop within my budget",
-      },
-      {
-        id: "specs",
-        label: "Explain specifications",
-        icon: "📋",
-        prompt: "Can you explain specifications for me?",
-      },
-      {
-        id: "gifts",
-        label: "Gift ideas",
-        icon: "🎁",
-        prompt: "I need gift ideas",
-      },
-    ];
-  } catch (error) {
-    return handleServiceError(error);
-  }
+  void options;
+  return [
+    {
+      id: "find",
+      label: "Find the right product",
+      icon: "🔍",
+      prompt: "Help me find the right product",
+    },
+    {
+      id: "compare",
+      label: "Compare products",
+      icon: "⚖️",
+      prompt: "I want to compare products",
+    },
+    {
+      id: "budget",
+      label: "Shop within my budget",
+      icon: "💰",
+      prompt: "Help me shop within my budget",
+    },
+    {
+      id: "specs",
+      label: "Explain specifications",
+      icon: "📋",
+      prompt: "Can you explain specifications for me?",
+    },
+    {
+      id: "gifts",
+      label: "Gift ideas",
+      icon: "🎁",
+      prompt: "I need gift ideas",
+    },
+  ];
 }

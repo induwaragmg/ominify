@@ -1,33 +1,57 @@
 "use client";
 
 import useAssistantStore from "@/stores/assistantStore";
-import { Paperclip, ArrowUp } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { Paperclip, ArrowUp, Square } from "lucide-react";
 import { useState, useCallback, type KeyboardEvent } from "react";
 
 export default function ChatInput(): React.ReactNode {
   const [value, setValue] = useState("");
-  const { sendMessage, createConversation, activeConversation, isSending } =
-    useAssistantStore();
+  const {
+    sendMessage,
+    createConversation,
+    cancelActiveRequest,
+    activeConversation,
+    isSending,
+    streamingPhase,
+  } = useAssistantStore();
+
+  const { getToken } = useAuth();
+
+  const isStreaming =
+    isSending || (streamingPhase !== "idle" && streamingPhase !== "completed");
 
   const handleSubmit = useCallback(async () => {
     const trimmed = value.trim();
-    if (!trimmed || isSending) return;
+    if (!trimmed || isStreaming) return;
 
     setValue("");
 
+    // Get Clerk JWT for authenticated requests
+    let token: string | null = null;
+    try {
+      token = await getToken();
+    } catch {
+      // Dev mode fallback — backend allows unauthenticated in development
+    }
+
     if (activeConversation) {
-      await sendMessage(trimmed);
+      await sendMessage(trimmed, token);
     } else {
       // No active conversation — create one with this as the initial message
-      await createConversation(trimmed);
+      await createConversation(trimmed, token);
     }
-  }, [value, isSending, activeConversation, sendMessage, createConversation]);
+  }, [value, isStreaming, activeConversation, sendMessage, createConversation, getToken]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
+  };
+
+  const handleCancel = () => {
+    cancelActiveRequest();
   };
 
   return (
@@ -44,26 +68,39 @@ export default function ChatInput(): React.ReactNode {
           <Paperclip className="h-4 w-4" />
         </button>
 
-        {/* Input - Exact 32px height matching buttons for 100% symmetrical centering */}
+        {/* Input */}
         <input
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Ominify Assistant..."
-          className="h-8 min-w-0 flex-1 bg-transparent px-1 text-sm text-gray-800 outline-none placeholder:text-gray-400"
+          placeholder={isStreaming ? "AI is responding..." : "Ask Ominify Assistant..."}
+          disabled={isStreaming}
+          className="h-8 min-w-0 flex-1 bg-transparent px-1 text-sm text-gray-800 outline-none placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
         />
 
-        {/* Send Button */}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!value.trim() || isSending}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm transition-all hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-          aria-label="Send message"
-        >
-          <ArrowUp className="h-4 w-4" />
-        </button>
+        {/* Send / Cancel Button */}
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-all hover:bg-red-600"
+            aria-label="Stop response"
+            title="Stop generating"
+          >
+            <Square className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!value.trim()}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm transition-all hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+            aria-label="Send message"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );

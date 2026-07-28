@@ -5,7 +5,12 @@ import type {
   Conversation,
   ConversationWithMessages,
   Message,
+  MessageContentBlock,
   QuickAction,
+  StreamingPhase,
+  SSECompletedEvent,
+  SSELLMChunkEvent,
+  SSEToolStartEvent,
 } from "@/types/assistant";
 import { AssistantAbortError } from "@/types/assistant";
 import * as assistantService from "@/services/assistant";
@@ -22,7 +27,7 @@ export type RequestLifecycleStatus =
 
 // ─── Assistant State Shape ───────────────────────────────────────────────────
 // Dedicated store managing conversation data, message history, network status,
-// and request cancellation. Completely decoupled from UI visibility/layout.
+// SSE streaming state, and request cancellation.
 
 interface AssistantState {
   conversations: Conversation[];
@@ -34,15 +39,21 @@ interface AssistantState {
   isSending: boolean;
   error: AssistantError | null;
   activeAbortController: AbortController | null;
+
+  // SSE streaming state
+  streamingPhase: StreamingPhase;
+  streamingText: string;
+  streamingTools: string[];
+  streamingToolCount: number;
 }
 
 interface AssistantActions {
-  fetchConversations: () => Promise<void>;
+  fetchConversations: (token?: string | null) => Promise<void>;
   fetchQuickActions: () => Promise<void>;
-  openConversation: (conversationId: string) => Promise<void>;
-  createConversation: (initialMessage?: string) => Promise<void>;
-  sendMessage: (content: string) => Promise<void>;
-  deleteConversation: (conversationId: string) => Promise<void>;
+  openConversation: (conversationId: string, token?: string | null) => Promise<void>;
+  createConversation: (initialMessage?: string, token?: string | null) => Promise<void>;
+  sendMessage: (content: string, token?: string | null) => Promise<void>;
+  deleteConversation: (conversationId: string, token?: string | null) => Promise<void>;
   cancelActiveRequest: () => void;
   goBackToWelcome: () => void;
   clearError: () => void;
@@ -61,9 +72,15 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
     error: null,
     activeAbortController: null,
 
+    // SSE streaming state
+    streamingPhase: "idle",
+    streamingText: "",
+    streamingTools: [],
+    streamingToolCount: 0,
+
     // ── Actions ──────────────────────────────────────────────────────────────
 
-    fetchConversations: async () => {
+    fetchConversations: async (token) => {
       const controller = new AbortController();
       set({
         isLoadingConversations: true,
@@ -75,7 +92,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       try {
         const conversations = await assistantService.getConversations(
           undefined,
-          { signal: controller.signal }
+          { signal: controller.signal, token },
         );
         set({
           conversations,
@@ -106,7 +123,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       }
     },
 
-    openConversation: async (conversationId) => {
+    openConversation: async (conversationId, token) => {
       const controller = new AbortController();
       set({
         isLoadingMessages: true,
@@ -118,7 +135,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       try {
         const conversation = await assistantService.getConversation(
           conversationId,
-          { signal: controller.signal }
+          { signal: controller.signal, token },
         );
         set({
           activeConversation: conversation,
@@ -140,7 +157,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       }
     },
 
-    createConversation: async (initialMessage) => {
+    createConversation: async (initialMessage, token) => {
       const controller = new AbortController();
       set({
         isLoadingMessages: true,
@@ -150,19 +167,24 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       });
 
       try {
-        const { conversation, messages } =
+        const { conversation } =
           await assistantService.createConversation(
             { initialMessage },
-            { signal: controller.signal }
+            { signal: controller.signal, token },
           );
 
         set((s) => ({
-          activeConversation: { ...conversation, messages },
+          activeConversation: { ...conversation, messages: [] },
           conversations: [conversation, ...s.conversations],
           isLoadingMessages: false,
           status: "idle",
           activeAbortController: null,
         }));
+
+        // If there's an initial message, send it via SSE streaming
+        if (initialMessage) {
+          await get().sendMessage(initialMessage, token);
+        }
       } catch (e) {
         if (e instanceof AssistantAbortError) {
           set({ isLoadingMessages: false, status: "idle", activeAbortController: null });
@@ -177,7 +199,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       }
     },
 
-    sendMessage: async (content) => {
+    sendMessage: async (content, token) => {
       const { activeConversation } = get();
       if (!activeConversation) return;
 
@@ -195,9 +217,13 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
 
       set((s) => ({
         isSending: true,
-        status: "sending",
+        status: "streaming",
         error: null,
         activeAbortController: controller,
+        streamingPhase: "thinking",
+        streamingText: "",
+        streamingTools: [],
+        streamingToolCount: 0,
         activeConversation: s.activeConversation
           ? {
               ...s.activeConversation,
@@ -210,35 +236,141 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       }));
 
       try {
-        const { assistantMessage } = await assistantService.sendMessage(
-          {
-            conversationId: activeConversation.id,
-            content,
-          },
-          { signal: controller.signal }
-        );
-
+        // Mark user message as sent
         set((s) => ({
-          isSending: false,
-          status: "idle",
-          activeAbortController: null,
           activeConversation: s.activeConversation
             ? {
                 ...s.activeConversation,
-                messages: [
-                  ...s.activeConversation.messages.map((m) =>
-                    m.id === optimisticUserMsg.id
-                      ? { ...m, status: "sent" as const }
-                      : m
-                  ),
-                  assistantMessage,
-                ],
+                messages: s.activeConversation.messages.map((m) =>
+                  m.id === optimisticUserMsg.id
+                    ? { ...m, status: "sent" as const }
+                    : m,
+                ),
               }
             : null,
         }));
+
+        // Stream SSE events from the backend
+        const stream = assistantService.streamSSE(
+          activeConversation.id,
+          content,
+          { signal: controller.signal, token },
+        );
+
+        for await (const sseEvent of stream) {
+          const { event, data } = sseEvent;
+
+          switch (event) {
+            case "thinking":
+              set({ streamingPhase: "thinking" });
+              break;
+
+            case "planning":
+              set({ streamingPhase: "planning" });
+              break;
+
+            case "tool_start": {
+              const toolData = data as SSEToolStartEvent;
+              set({
+                streamingPhase: "tool_execution",
+                streamingTools: toolData.tools || [],
+              });
+              break;
+            }
+
+            case "tool_finished": {
+              set({ streamingPhase: "tool_execution" });
+              break;
+            }
+
+            case "reasoning":
+              set({ streamingPhase: "reasoning" });
+              break;
+
+            case "llm_chunk": {
+              const chunkData = data as SSELLMChunkEvent;
+              set((s) => ({
+                streamingPhase: "streaming",
+                streamingText: s.streamingText + (chunkData.delta || ""),
+              }));
+              break;
+            }
+
+            case "completed": {
+              const completedData = data as SSECompletedEvent;
+              const contentBlocks: MessageContentBlock[] =
+                completedData.content_blocks || [
+                  { type: "text", text: completedData.text || "" },
+                ];
+
+              const assistantMessage: Message = {
+                id: crypto.randomUUID(),
+                conversationId: activeConversation.id,
+                role: "assistant",
+                status: "sent",
+                content: contentBlocks,
+                createdAt: new Date(),
+              };
+
+              set((s) => ({
+                isSending: false,
+                status: "idle",
+                activeAbortController: null,
+                streamingPhase: "idle",
+                streamingText: "",
+                streamingTools: [],
+                streamingToolCount: 0,
+                activeConversation: s.activeConversation
+                  ? {
+                      ...s.activeConversation,
+                      messages: [
+                        ...s.activeConversation.messages,
+                        assistantMessage,
+                      ],
+                    }
+                  : null,
+              }));
+              break;
+            }
+          }
+        }
       } catch (e) {
         if (e instanceof AssistantAbortError) {
-          set({ isSending: false, status: "idle", activeAbortController: null });
+          // Finalize any partial streamed text on cancel
+          const partialText = get().streamingText;
+          if (partialText) {
+            const partialMessage: Message = {
+              id: crypto.randomUUID(),
+              conversationId: activeConversation.id,
+              role: "assistant",
+              status: "sent",
+              content: [{ type: "text", text: partialText }],
+              createdAt: new Date(),
+            };
+            set((s) => ({
+              isSending: false,
+              status: "idle",
+              activeAbortController: null,
+              streamingPhase: "idle",
+              streamingText: "",
+              streamingTools: [],
+              activeConversation: s.activeConversation
+                ? {
+                    ...s.activeConversation,
+                    messages: [...s.activeConversation.messages, partialMessage],
+                  }
+                : null,
+            }));
+          } else {
+            set({
+              isSending: false,
+              status: "idle",
+              activeAbortController: null,
+              streamingPhase: "idle",
+              streamingText: "",
+              streamingTools: [],
+            });
+          }
           return;
         }
         set({
@@ -246,16 +378,19 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
           status: "error",
           error: e instanceof Error ? e : new Error(String(e)),
           activeAbortController: null,
+          streamingPhase: "idle",
+          streamingText: "",
+          streamingTools: [],
         });
       }
     },
 
-    deleteConversation: async (conversationId) => {
+    deleteConversation: async (conversationId, token) => {
       try {
-        await assistantService.deleteConversation(conversationId);
+        await assistantService.deleteConversation(conversationId, { token });
         set((s) => ({
           conversations: s.conversations.filter(
-            (c) => c.id !== conversationId
+            (c) => c.id !== conversationId,
           ),
           activeConversation:
             s.activeConversation?.id === conversationId
@@ -280,6 +415,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
           isLoadingMessages: false,
           isLoadingConversations: false,
           status: "idle",
+          streamingPhase: "idle",
         });
       }
     },
@@ -287,7 +423,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
     goBackToWelcome: () => set({ activeConversation: null, error: null }),
 
     clearError: () => set({ error: null, status: "idle" }),
-  })
+  }),
 );
 
 export default useAssistantStore;

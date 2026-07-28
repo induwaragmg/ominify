@@ -1,6 +1,6 @@
 // ─── Assistant Domain Models & API Contracts ────────────────────────────────
 // Production-ready, extensible domain models for the AI Shopping Assistant.
-// Designed to align with the upcoming `assistant-service` microservice
+// Designed to align with the `assistant-service` microservice
 // without requiring frontend refactoring when backend capability expands.
 
 import type { ProductType } from "@repo/types";
@@ -129,10 +129,11 @@ export interface QuickAction {
 
 export interface RequestOptions {
   signal?: AbortSignal;
+  token?: string | null;
 }
 
 // ─── Service Request & Response Contracts ────────────────────────────────────
-// Aligned with planned HTTP endpoints on `assistant-service` (Port :8004)
+// Aligned with HTTP endpoints on `assistant-service` (Port :8004)
 
 export interface GetConversationsParams {
   cursor?: string;
@@ -156,6 +157,92 @@ export interface CreateConversationRequest {
 export interface CreateConversationResponse {
   conversation: Conversation;
   messages: Message[];
+}
+
+// ─── Backend API Response Shapes (snake_case mapping) ────────────────────────
+
+export interface BackendConversationResponse {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackendMessageResponse {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: MessageContentBlock[];
+  created_at: string;
+}
+
+export interface BackendConversationListResponse {
+  conversations: BackendConversationResponse[];
+  total: number;
+}
+
+export interface BackendMessageListResponse {
+  messages: BackendMessageResponse[];
+  total: number;
+}
+
+// ─── SSE Event Types ─────────────────────────────────────────────────────────
+
+export type StreamingPhase =
+  | "idle"
+  | "thinking"
+  | "planning"
+  | "tool_execution"
+  | "reasoning"
+  | "streaming"
+  | "completed";
+
+export interface SSEThinkingEvent {
+  status: string;
+  conversation_id: string;
+}
+
+export interface SSEPlanningEvent {
+  intent: string;
+  confidence: number;
+  needs_clarification: boolean;
+  reasoning: string;
+}
+
+export interface SSEToolStartEvent {
+  tools: string[];
+}
+
+export interface SSEToolFinishedEvent {
+  count: number;
+}
+
+export interface SSEReasoningEvent {
+  status: string;
+}
+
+export interface SSELLMChunkEvent {
+  delta: string;
+}
+
+export interface SSECompletedEvent {
+  text: string;
+  content_blocks: MessageContentBlock[];
+}
+
+export type SSEEventData =
+  | SSEThinkingEvent
+  | SSEPlanningEvent
+  | SSEToolStartEvent
+  | SSEToolFinishedEvent
+  | SSEReasoningEvent
+  | SSELLMChunkEvent
+  | SSECompletedEvent;
+
+export interface ParsedSSEEvent {
+  event: string;
+  data: SSEEventData;
 }
 
 // ─── Typed Frontend Errors ───────────────────────────────────────────────────

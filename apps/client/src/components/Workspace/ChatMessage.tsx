@@ -1,9 +1,11 @@
 "use client";
 
-import type { Message } from "@/types/assistant";
+import type { Message, FollowUpSuggestionsContentBlock } from "@/types/assistant";
+import useAssistantStore from "@/stores/assistantStore";
 import { Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import ProductRecommendationCard from "./ProductRecommendationCard";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface ChatMessageProps {
   message: Message;
@@ -15,6 +17,37 @@ function formatTime(date: Date): string {
     minute: "2-digit",
     hour12: true,
   }).format(date);
+}
+
+function FollowUpSuggestions({ block }: { block: FollowUpSuggestionsContentBlock }) {
+  const { sendMessage, activeConversation } = useAssistantStore();
+
+  if (!block.suggestions || block.suggestions.length === 0) return null;
+
+  const handleClick = (suggestion: string) => {
+    if (!activeConversation) return;
+    sendMessage(suggestion);
+  };
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5 max-w-[560px]">
+      {block.suggestions.map((suggestion, idx) => (
+        <motion.button
+          key={idx}
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: idx * 0.06, duration: 0.2 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          type="button"
+          onClick={() => handleClick(suggestion)}
+          className="rounded-full border border-blue-100 bg-blue-50/60 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:border-blue-200 hover:bg-blue-100/80"
+        >
+          {suggestion}
+        </motion.button>
+      ))}
+    </div>
+  );
 }
 
 export default function ChatMessage({ message }: ChatMessageProps): React.ReactNode {
@@ -36,8 +69,8 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
           <span className="text-[11px] font-medium text-gray-500">Ominify AI</span>
         </div>
 
-        {/* Message content placed BELOW bot indicator - full width */}
-        <div className="w-full space-y-1.5">
+        {/* Message content - capped at max-w-[640px] so text doesn't stretch infinitely on wide panels */}
+        <div className="w-full max-w-[640px] space-y-1.5">
           {message.content.map((block, i) => {
             if (block.type === "text") {
               return (
@@ -45,14 +78,17 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
                   key={i}
                   className="w-full rounded-2xl rounded-tl-md border border-gray-100 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-gray-800 shadow-sm"
                 >
-                  {block.text}
+                  <MarkdownRenderer content={block.text} />
                 </div>
               );
             }
 
             if (block.type === "product_recommendations") {
               return (
-                <div key={i} className="w-full space-y-2">
+                <div
+                  key={i}
+                  className="w-full max-w-[420px] flex flex-col gap-2 my-1"
+                >
                   {block.products.map((product) => (
                     <ProductRecommendationCard
                       key={product.id}
@@ -63,6 +99,10 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
               );
             }
 
+            if (block.type === "follow_up_suggestions") {
+              return <FollowUpSuggestions key={i} block={block} />;
+            }
+
             return null;
           })}
 
@@ -70,7 +110,7 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
             {formatTime(
               message.createdAt instanceof Date
                 ? message.createdAt
-                : new Date(message.createdAt)
+                : new Date(message.createdAt),
             )}
           </p>
         </div>
@@ -86,7 +126,7 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="flex w-full flex-col items-end gap-1"
     >
-      <div className="flex max-w-[85%] flex-col items-end space-y-1">
+      <div className="flex max-w-[85%] sm:max-w-[500px] flex-col items-end space-y-1">
         {message.content.map((block, i) => {
           if (block.type === "text") {
             return (
@@ -104,7 +144,7 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
           {formatTime(
             message.createdAt instanceof Date
               ? message.createdAt
-              : new Date(message.createdAt)
+              : new Date(message.createdAt),
           )}
         </p>
       </div>
@@ -119,7 +159,7 @@ export function TypingIndicator(): React.ReactNode {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex w-full flex-col items-start gap-1"
+      className="flex w-full flex-col items-start gap-1 max-w-[640px]"
     >
       <div className="flex items-center gap-1.5 px-0.5">
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">

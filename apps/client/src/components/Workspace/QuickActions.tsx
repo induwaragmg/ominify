@@ -1,12 +1,14 @@
 "use client";
 
 import useAssistantStore from "@/stores/assistantStore";
+import { useAuth } from "@clerk/nextjs";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 
 export default function QuickActions(): React.ReactNode {
   const { quickActions, fetchQuickActions, createConversation } =
     useAssistantStore();
+  const { getToken } = useAuth();
 
   useEffect(() => {
     if (quickActions.length === 0) {
@@ -16,8 +18,14 @@ export default function QuickActions(): React.ReactNode {
 
   if (quickActions.length === 0) return null;
 
-  const handleClick = (prompt: string) => {
-    createConversation(prompt);
+  const handleClick = async (prompt: string) => {
+    let token: string | null = null;
+    try {
+      token = await getToken();
+    } catch {
+      // Dev mode fallback
+    }
+    createConversation(prompt, token);
   };
 
   return (

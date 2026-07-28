@@ -8,6 +8,7 @@ import RightSidebar from "../RightSidebar";
 import AssistantPanel from "./AssistantPanel";
 
 const MIN_ASSISTANT_WIDTH = 320;
+const MAX_ASSISTANT_PANEL_WIDTH = 720;
 const MIN_MAIN_CONTENT_WIDTH = 480;
 
 // ─── Resize Handle ──────────────────────────────────────────────────────────
@@ -31,22 +32,13 @@ function ResizeHandle({
     >
       {/* Visual bar positioned in the gap */}
       <div
-        className={`h-[calc(100%-22px)] mt-5  w-[4px] rounded-full transition-all duration-150
+        className={`h-[calc(100%-22px)] mt-5 w-[4px] rounded-full transition-all duration-150
           ${
             isResizing
-              ? "bg-gray-400/60 shadow-sm"
-              : "bg-gray-300/30 group-hover/handle:bg-gray-400/60"
+              ? "bg-blue-500 shadow-sm"
+              : "bg-gray-300/40 group-hover/handle:bg-blue-400"
           }`}
       />
-      {/* Grip pill indicator in the center of the gap */}
-      {/* <div
-        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 rounded-full bg-white px-0.5 py-2 shadow-md border border-gray-200 transition-all duration-150
-          ${isResizing ? "opacity-100 scale-105 border-blue-400" : "opacity-0 group-hover/handle:opacity-100"}`}
-      >
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-1 w-1 rounded-full bg-blue-500" />
-        ))}
-      </div> */}
     </div>
   );
 }
@@ -79,9 +71,9 @@ export default function Workspace(): React.ReactNode {
       // Measure the flex row parent to compute dynamic max
       const parentWidth =
         asideRef.current?.parentElement?.offsetWidth ?? window.innerWidth;
-      const maxWidth = Math.max(
-        MIN_ASSISTANT_WIDTH,
-        parentWidth - MIN_MAIN_CONTENT_WIDTH
+      const maxWidth = Math.min(
+        MAX_ASSISTANT_PANEL_WIDTH,
+        Math.max(MIN_ASSISTANT_WIDTH, parentWidth - MIN_MAIN_CONTENT_WIDTH)
       );
 
       const onMouseMove = (moveEvent: MouseEvent) => {
