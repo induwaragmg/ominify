@@ -1,12 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import SearchBar from "./SearchBar";
-import { Bell, Home } from "lucide-react";
+import { Bell, Home, Sparkles } from "lucide-react";
 import ShoppingCartIcon from "./ShoppingCartIcon";
 import { Show } from "@clerk/nextjs";
 import ProfileButton from "./ProfileButton";
 import { SidebarTrigger } from "./ui/sidebar";
+import useWorkspaceStore from "@/stores/workspaceStore";
 
 const Navbar = (): JSX.Element => {
+  const { toggleAssistant, isAssistantOpen, isMobileOpen } = useWorkspaceStore();
+  const isOpen = isAssistantOpen || isMobileOpen;
+
   return (
     <div className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl">
       <div className="w-full flex items-center justify-between gap-3 border-gray-200 py-4">
@@ -36,6 +42,35 @@ const Navbar = (): JSX.Element => {
             <Bell className="h-5 w-5" />
           </button>
 
+          {/* AI Assistant button */}
+          <button
+            type="button"
+            onClick={toggleAssistant}
+            className={`hidden sm:flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-medium shadow-sm transition cursor-pointer ${
+              isOpen
+                ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                : "bg-white text-gray-600 hover:text-blue-600 hover:shadow-md"
+            }`}
+            title="AI Assistant"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden md:inline">Assistant</span>
+          </button>
+
+          {/* Mobile-only AI icon button */}
+          <button
+            type="button"
+            onClick={toggleAssistant}
+            className={`flex sm:hidden shrink-0 h-10 w-10 items-center justify-center rounded-full shadow-sm transition cursor-pointer ${
+              isOpen
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-500 hover:text-blue-600"
+            }`}
+            title="AI Assistant"
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
+
           {/* Shopping Cart Icon */}
           <ShoppingCartIcon />
 
@@ -49,15 +84,6 @@ const Navbar = (): JSX.Element => {
             </Link>
           </Show>
 
-          {/* <Show when="signed-out">
-            <Link
-              href="/sign-up"
-              className="flex shrink-0 items-center justify-center rounded-full bg-brand px-4 py-2 text-sm font-medium text-white shadow-xs transition hover:bg-brand-hover"
-            >
-              Sign Up
-            </Link>
-          </Show> */}
-
           {/* Signed-in User Profile */}
           <Show when="signed-in">
             <ProfileButton />
@@ -69,3 +95,4 @@ const Navbar = (): JSX.Element => {
 };
 
 export default Navbar;
+

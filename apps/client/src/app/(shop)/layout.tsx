@@ -1,6 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import RightSidebar from "@/components/RightSidebar";
+import Workspace from "@/components/Workspace/Workspace";
 import { AppSidebar } from "@/components/AppSidebar";
 import {
   SidebarProvider,
@@ -27,7 +27,7 @@ export default function ShopLayout({
                 {children}
               </main>
             </div>
-            <RightSidebar />
+            <Workspace />
           </div>
           <Footer />
 
@@ -36,4 +36,4 @@ export default function ShopLayout({
       </SidebarInset>
     </SidebarProvider>
   );
-}
+}

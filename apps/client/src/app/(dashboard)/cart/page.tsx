@@ -82,7 +82,7 @@ const steps = [
 //   },
 // ];
 
-const CartPage = () => {
+const CartPage = (): React.ReactNode => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [shippingForm, setShippingForm] = useState<ShippingFormInputs>();

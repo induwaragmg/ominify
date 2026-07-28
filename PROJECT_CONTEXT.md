@@ -1,6 +1,6 @@
-# E-commerce Project Context and Handoff
+# Ominify E-commerce Project Context and Handoff
 
-Use this document as context when continuing the project. It reflects the repository as inspected on **2026-07-27**. Treat statements under **Current implementation** and **Completed features** as verified observations of the codebase.
+Use this document as context when continuing the project. It reflects the repository as inspected on **2026-07-28**. Treat statements under **Current implementation** and **Completed features** as verified observations of the codebase.
 
 ---
 
@@ -18,11 +18,11 @@ When answering questions or building features for this project:
 
 ## Project Goal
 
-A full-stack, event-driven e-commerce microservices platform featuring:
+**Ominify** is a full-stack, event-driven e-commerce microservices platform featuring:
 
-- **Customer Storefront (`apps/client`)**: Next.js App Router customer interface for browsing products, filtering by category/search/sort, managing a persisted cart with variant selections (size/color), completing Stripe Checkout, and tracking order history.
-- **Admin Dashboard (`apps/admin`)**: Next.js App Router management portal protected by Clerk role-based access control (`admin` role), enabling catalog management (products & categories), user administration, and order monitoring.
-- **Product Service (`apps/product-service`)**: Express 5 service managing PostgreSQL product catalog via Prisma 7. Emits Kafka events when products are created or deleted.
+- **Customer Storefront (`apps/client`)**: Next.js 15 App Router customer interface featuring an auto-playing hero banner carousel, debounced real-time search with a responsive fullscreen mobile search overlay, product catalog with advanced category/price filtering, wishlist management with cross-device PostgreSQL sync, persisted cart with variant selections (size/color), Stripe Embedded Checkout with receipt success modal, customer account portal, and order history tracking.
+- **Admin Dashboard (`apps/admin`)**: Next.js 15 App Router management portal protected by Clerk role-based access control (`admin` role), enabling catalog management (products & categories), user administration, and order monitoring.
+- **Product & Wishlist Service (`apps/product-service`)**: Express 5 service managing PostgreSQL product catalog and user wishlists via Prisma 7. Emits Kafka events when products are created or deleted, and provides weighted search algorithms (supporting term normalization, pluralization, and hyphens).
 - **Order Service (`apps/order-service`)**: Fastify 5 service managing MongoDB order records via Mongoose. Consumes Kafka payment events to persist orders and emits order creation events.
 - **Payment Service (`apps/payment-service`)**: Hono 4 service interfacing with Stripe Embedded Checkout. Listens for Stripe webhooks, emits Kafka payment events, and automatically synchronizes catalog items into Stripe products/prices via Kafka event subscriptions.
 - **Auth Service (`apps/auth-service`)**: Express 5 service providing admin-protected User CRUD operations interfacing with Clerk Backend SDK. Emits Kafka user creation events.
@@ -47,7 +47,7 @@ This is a pnpm workspace managed by Turborepo containing 7 applications and 6 sh
                               +---+---------------+---+
                                   |               |
              +--------------------+               +--------------------+
-             | (Catalog / Products)                                    | (Checkout / Session)
+             | (Catalog / Wishlist / Products)                          | (Checkout / Session)
              v                                                         v
 +--------------------------+                               +--------------------------+
 | product-service (Express)|                               | payment-service (Hono)   |
@@ -95,9 +95,9 @@ This is a pnpm workspace managed by Turborepo containing 7 applications and 6 sh
 ### Shared Packages
 
 - **`@repo/kafka`**: Shared Kafka client setup, producer (`createProducer`), and consumer (`createConsumer`) abstraction built on `kafkajs`.
-- **`@repo/product-db`**: Prisma 7 PostgreSQL client, schema, and migrations for product catalog data.
-- **`@repo/order-db`**: Mongoose connection and MongoDB `Order` model definition.
-- **`@repo/types`**: Shared TypeScript contracts, Zod schemas, Clerk JWT claim types, and cart DTOs.
+- **`@repo/product-db`**: Prisma 7 PostgreSQL client, schema (`Product`, `Category`, `Wishlist`), and migrations.
+- **`@repo/order-db`**: Mongoose connection and MongoDB `Order` model definition (with support for variant size, color, image).
+- **`@repo/types`**: Shared TypeScript contracts, Zod schemas, Clerk JWT claim types, and cart/wishlist DTOs.
 - **`@repo/eslint-config`**: Monorepo linting rules.
 - **`@repo/typescript-config`**: Shared TypeScript compiler configurations.
 
@@ -109,15 +109,18 @@ This is a pnpm workspace managed by Turborepo containing 7 applications and 6 sh
 ecommerse_app/
 |-- apps/
 |   |-- client/                 Customer Next.js App Router application (:3002)
-|   |   |-- src/app/            Storefront, products, detail, cart, checkout, return, orders
-|   |   |-- src/components/     Catalog cards, variant selectors, Stripe payment form, layout
-|   |   `-- src/stores/         Zustand cart store with localStorage persistence
+|   |   |-- public/             Brand logo (`logo.svg`), promotional hero banners (`banners/`)
+|   |   |-- src/app/            (shop) landing, (dashboard) account, cart, categories, orders, products, return, wishlist
+|   |   |-- src/components/     HeroCarousel, SearchBar, ProductCard, ProductList, ProductInteraction,
+|   |   |                       CategoryCard, Categories, CheckoutForm, PaymentSuccessModal, AppSidebar, RightSidebar, Navbar, Footer
+|   |   |-- src/lib/            Category data constants (`categoryData.ts`), UI helper utilities
+|   |   `-- src/stores/         Zustand stores: `cartStore.ts` (cart persistence), `wishlistStore.ts` (wishlist state & API sync)
 |   |-- admin/                  Admin Next.js App Router dashboard (:3003)
 |   |   |-- src/app/            Protected dashboard, products, categories, users, orders
 |   |   |-- src/components/     Forms (AddProduct, AddUser, AddCategory), tables, charts, sidebar
 |   |   `-- src/middleware.ts   Clerk role-based protection (admin role required)
-|   |-- product-service/        Express catalog API (:8000)
-|   |   `-- src/                Controllers, routes, Prisma client, Kafka producer
+|   |-- product-service/        Express catalog & wishlist API (:8000)
+|   |   `-- src/                Controllers (`product`, `category`, `wishlist`), routes, Prisma client, Kafka producer
 |   |-- order-service/          Fastify order API (:8001)
 |   |   `-- src/                Order query routes, Mongoose db, Kafka consumer & producer
 |   |-- payment-service/        Hono Stripe checkout API (:8002)
@@ -128,7 +131,7 @@ ecommerse_app/
 |       `-- src/                Kafka topic consumers, Nodemailer Gmail transport
 |-- packages/
 |   |-- kafka/                  Shared kafkajs client, producer, consumer & Docker Compose
-|   |-- product-db/             Prisma 7 PostgreSQL schema, client, and migrations
+|   |-- product-db/             Prisma 7 PostgreSQL schema (`Product`, `Category`, `Wishlist`), client, and migrations
 |   |-- order-db/               Mongoose connection and Order model
 |   |-- types/                  Shared TypeScript types, Zod schemas, and JWT claims
 |   |-- eslint-config/          Shared ESLint configuration
@@ -144,10 +147,10 @@ ecommerse_app/
 ## Tech Stack
 
 - **Monorepo**: pnpm 9 workspaces, Turborepo 2, TypeScript 5.9.
-- **Customer Frontend (`apps/client`)**: Next.js 15, React 19, Tailwind CSS 4, Zustand 5 (local storage cart persistence), React Hook Form, Zod, Lucide icons, Stripe Elements (`@stripe/react-stripe-js`), Clerk (`@clerk/nextjs`).
+- **Customer Frontend (`apps/client`)**: Next.js 15, React 19, Tailwind CSS 4, Zustand 5 (cart & wishlist stores), React Hook Form, Zod, Lucide icons, Stripe Elements (`@stripe/react-stripe-js`), Clerk (`@clerk/nextjs`), Google Fonts (`Outfit`, `Inter`).
 - **Admin Frontend (`apps/admin`)**: Next.js 15, React 19, Tailwind CSS 4, Radix UI / shadcn-style components, TanStack Table, Recharts, React Hook Form, Zod, next-themes, Clerk (`@clerk/nextjs`).
 - **Authentication & Authorization**: Clerk authentication across Next.js frontends, Express (`@clerk/express`), Fastify (`@clerk/fastify`), and Hono (`@hono/clerk-auth`). Custom claims enforce `metadata.role === "admin"`.
-- **Product Service**: Express 5, Prisma 7, PostgreSQL via `@prisma/adapter-pg`.
+- **Product & Wishlist Service**: Express 5, Prisma 7, PostgreSQL via `@prisma/adapter-pg`.
 - **Order Service**: Fastify 5, MongoDB with Mongoose.
 - **Payment Service**: Hono 4 on Node.js, Stripe SDK (Checkout sessions & webhooks).
 - **Auth Service**: Express 5, `@clerk/express`, `@clerk/backend` SDK.
@@ -158,10 +161,11 @@ ecommerse_app/
 
 ## Data Models and Kafka Contracts
 
-### Product Catalog (PostgreSQL via Prisma)
+### Product Catalog & Wishlist (PostgreSQL via Prisma)
 
-- **`Product`**: `id` (Int, PK), `name` (String), `shortDescription` (String), `description` (String), `price` (Int, minor units / cents), `sizes` (String[]), `colors` (String[]), `images` (JSON: color-to-image mapping), `categorySlug` (String, FK), `createdAt`, `updatedAt`.
-- **`Category`**: `id` (Int, PK), `name` (String), `slug` (String, Unique).
+- **`Product`**: `id` (Int, PK, auto-increment), `name` (String), `shortDescription` (String), `description` (String), `price` (Int, minor units / cents), `sizes` (String[]), `colors` (String[]), `images` (JSON: color-to-image mapping), `categorySlug` (String, FK), `createdAt`, `updatedAt`.
+- **`Category`**: `id` (Int, PK, auto-increment), `name` (String), `slug` (String, Unique).
+- **`Wishlist`**: `id` (Int, PK, auto-increment), `userId` (String), `productId` (Int, FK -> `Product.id`, Cascade Delete), `createdAt` (DateTime). Unique constraint: `@@unique([userId, productId])`.
 
 ### Orders (MongoDB via Mongoose)
 
@@ -209,9 +213,14 @@ ecommerse_app/
 
 ### 1. Customer Storefront (`apps/client`)
 
-- **Catalog & Detail Pages**: Connected to live `product-service` API (`NEXT_PUBLIC_PRODUCT_SERVICE_URL/products`). Features category filter tabs, search, price sorting, empty states, and error boundary fallbacks. Product detail route fetches dynamic product information and generates metadata.
+- **Hero Carousel & Branding**: Storefront home page features an auto-rotating hero banner (`HeroCarousel.tsx`) with custom promotional slides (`banner1.png`, `banner2.png`, `banner3.png`), quick navigation CTAs, and refreshed Ominify branding.
+- **Search Bar & Mobile Search Overlay**: `SearchBar.tsx` provides debounced real-time product search with dropdown suggestions and keyboard shortcuts (`Ctrl+K`). On mobile viewports, it opens a responsive full-screen search modal with instant results and touch-friendly back/close triggers.
+- **Wishlist System**: Powered by Zustand `wishlistStore.ts` combined with backend sync via `product-service` (`/wishlist`). Wishlist heart toggles on `ProductCard` and `ProductInteraction` reflect real-time active states. Customer can view saved items on `/wishlist`.
+- **Account Dashboard**: `/account` route provides a personalized customer portal displaying Clerk profile information, order summary statistics, saved addresses, quick actions, and settings.
+- **Category Browsing**: `/categories` route provides visual category cards (`CategoryCard.tsx`) backed by curated category metadata (`categoryData.ts`), displaying product counts and direct filter links.
+- **Catalog & Detail Pages**: Connected to live `product-service` API (`/products`). Features category filter tabs, search, price sorting, empty states, and error boundary fallbacks. Product detail route fetches dynamic product information and variant selectors.
 - **Cart Management**: Client-side Zustand store persisted in browser `localStorage`. Identifies cart lines by composite key `(productId, selectedSize, selectedColor)`.
-- **Checkout & Payment**: Form collects shipping details, sends cart line items to `payment-service` (`/sessions/create-checkout-session`), obtains a Stripe embedded client secret, and renders Stripe Elements.
+- **Checkout & Payment**: Form collects shipping details, sends cart line items to `payment-service` (`/sessions/create-checkout-session`), obtains a Stripe embedded client secret, and renders Stripe Elements with an interactive `PaymentSuccessModal`.
 - **Order History**: `orders/page.tsx` fetches user orders from `order-service` (`/user-orders`) passing Clerk JWT bearer tokens. Renders order status badges, product item breakdowns, selected variants, and direct product links.
 
 ### 2. Admin Dashboard (`apps/admin`)
@@ -221,11 +230,17 @@ ecommerse_app/
 - **Product & Category Management**: AddProduct and AddCategory sheets post data directly to `product-service` on port 8000. Creating a product automatically emits a `product.created` event to Kafka.
 - **Orders View**: Displays real-time order data fetched from `order-service` on port 8001.
 
-### 3. Product Service (`apps/product-service`)
+### 3. Product & Wishlist Service (`apps/product-service`)
 
 - **Port**: `8000` (Express 5).
-- **Public endpoints**: `GET /products` (supports `category`, `search`, `sort`, `limit` query filters), `GET /products/:id`, `GET /categories`.
-- **Admin endpoints**: `POST /products`, `PUT /products/:id`, `DELETE /products/:id`, `POST /categories`, `PUT /categories/:id`, `DELETE /categories/:id` (protected by Clerk `shouldBeAdmin` middleware).
+- **Public Endpoints**:
+  - `GET /products`: Supports search, category, sort, and limit. Includes weighted search algorithms handling pluralization, hyphens, title, description, and category fields.
+  - `GET /products/:id`: Retrieves individual product details.
+  - `GET /categories`: Lists all catalog categories.
+  - `GET /wishlist`: Fetches user's saved wishlist products (requires Clerk Auth).
+  - `POST /wishlist`: Saves a product to user's wishlist (requires Clerk Auth).
+  - `DELETE /wishlist/:productId`: Removes a product from user's wishlist (requires Clerk Auth).
+- **Admin Endpoints**: `POST /products`, `PUT /products/:id`, `DELETE /products/:id`, `POST /categories`, `PUT /categories/:id`, `DELETE /categories/:id` (protected by Clerk `shouldBeAdmin` middleware).
 - **Kafka Integration**: `createProduct` emits `product.created`; `deleteProduct` emits `product.deleted`.
 
 ### 4. Payment Service (`apps/payment-service`)
@@ -263,9 +278,12 @@ ecommerse_app/
 - [x] **Event-Driven Architecture**: Integrated Apache Kafka multi-broker cluster (`packages/kafka`) with sub-second message passing across services.
 - [x] **Complete Purchase Lifecycle (P0)**: Stripe checkout session -> Webhook event -> `payment.successful` Kafka event -> MongoDB Order creation -> `order.created` Kafka event -> Automated confirmation email.
 - [x] **Stripe Catalog Synchronization**: Product service creation/deletion events automatically sync with Stripe Products & Prices.
-- [x] **Storefront Integration (P1)**: Customer client connected to real product-service and order-service APIs with loading, empty, and error state handling.
-- [x] **Admin Authorization & Integration (P1)**: Admin dashboard protected by Clerk role claims (`admin`), connected to `auth-service`, `product-service`, and `order-service`.
-- [x] **Email Notifications**: Dedicated email microservice consuming `user.created` and `order.created` events.
+- [x] **Wishlist System (P1)**: PostgreSQL database schema (`Wishlist` model), `product-service` wishlist API endpoints, client Zustand wishlist store, product heart toggles, and dedicated `/wishlist` view.
+- [x] **Live Search & Fullscreen Mobile Search Overlay (P1)**: Debounced suggestion dropdown, category-aware weighted search, keyboard shortcuts (`Ctrl+K`), and full-screen mobile search modal.
+- [x] **Hero Banner Carousel & Brand Refresh (P1)**: Promotional hero carousel component, responsive banner assets, updated typography (`Outfit`/`Inter`), and Ominify visual identity.
+- [x] **Account Portal & Category Discovery Hub (P1)**: Dedicated `/account` dashboard view with stats/profile and `/categories` discovery page with curated category cards.
+- [x] **Payment Success & Receipt Modal (P1)**: Integrated `PaymentSuccessModal` rendering confirmation feedback and order navigation triggers.
+- [x] **Storefront & Admin Authorization (P1)**: Customer client and Admin dashboard fully connected to backend APIs with Clerk RBAC (`admin` role enforcement).
 
 ---
 
@@ -303,4 +321,7 @@ cd packages/kafka && docker compose up -d
 
 # Regenerate Prisma Client (Run from packages/product-db)
 pnpm --filter @repo/product-db db:generate
+
+# Run Prisma Database Migrations (Run from packages/product-db)
+pnpm --filter @repo/product-db db:migrate
 ```

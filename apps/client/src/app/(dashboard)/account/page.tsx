@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import {
   User,
@@ -165,7 +166,7 @@ const QuickLink = ({
 );
 
 // ─── Main Page ──────────────────────────────────────────────────────────────────
-const AccountSettingsPage = (): JSX.Element => {
+const AccountSettingsPage = (): React.JSX.Element => {
   const { user, isLoaded } = useUser();
   const { signOut } = useAuth();
 
