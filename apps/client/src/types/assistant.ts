@@ -1,88 +1,143 @@
-// ─── Assistant Domain Models ─────────────────────────────────────────────────
-// Strongly typed interfaces for the AI Shopping Assistant feature.
-// These models define the contract between the frontend UI and the
-// assistant-service backend. When the real microservice is built, only
-// `services/assistant.ts` needs to change — the UI consumes these types as-is.
+// ─── Assistant Domain Models & API Contracts ────────────────────────────────
+// Production-ready, extensible domain models for the AI Shopping Assistant.
+// Designed to align with the upcoming `assistant-service` microservice
+// without requiring frontend refactoring when backend capability expands.
 
 import type { ProductType } from "@repo/types";
 
-// ─── Message Types ───────────────────────────────────────────────────────────
+// ─── Role & Status Enums ──────────────────────────────────────────────────────
 
-/** Identifies who authored a message. */
-export type MessageRole = "user" | "assistant";
+export type MessageRole = "user" | "assistant" | "system" | "tool";
 
-/** Discriminated content blocks that a message can contain. */
+export type MessageStatus =
+  | "pending"
+  | "sending"
+  | "sent"
+  | "streaming"
+  | "error";
+
+export type ConversationStatus = "active" | "archived" | "pinned";
+
+// ─── Extensible Message Content Blocks ───────────────────────────────────────
+// Uses a discriminated union (`type` field) so new block types (citations,
+// tool results, attachments) can be added without breaking existing components.
+
+export type TextContentBlock = {
+  type: "text";
+  text: string;
+};
+
+export type ProductRecommendationsContentBlock = {
+  type: "product_recommendations";
+  products: AssistantProduct[];
+};
+
+export type ToolCallContentBlock = {
+  type: "tool_call";
+  toolName: string;
+  args: Record<string, unknown>;
+};
+
+export type ToolResultContentBlock = {
+  type: "tool_result";
+  toolName: string;
+  result: unknown;
+};
+
+export type CitationContentBlock = {
+  type: "citation";
+  title: string;
+  url?: string;
+  snippet?: string;
+};
+
+export type AttachmentContentBlock = {
+  type: "attachment";
+  name: string;
+  url: string;
+  mimeType: string;
+};
+
+export type FollowUpSuggestionsContentBlock = {
+  type: "follow_up_suggestions";
+  suggestions: string[];
+};
+
 export type MessageContentBlock =
-  | { type: "text"; text: string }
-  | { type: "product_recommendations"; products: AssistantProduct[] };
+  | TextContentBlock
+  | ProductRecommendationsContentBlock
+  | ToolCallContentBlock
+  | ToolResultContentBlock
+  | CitationContentBlock
+  | AttachmentContentBlock
+  | FollowUpSuggestionsContentBlock;
+
+// ─── Product Model (Extends `@repo/types`) ────────────────────────────────────
 
 /**
- * A product surfaced by the assistant in a recommendation.
- * Mirrors the core `ProductType` fields the UI needs, plus an optional
- * rating that the assistant service may compute.
+ * Extends core `@repo/types` `ProductType` rather than duplicating domain models.
+ * Adds optional AI enrichment metrics (e.g., computed rating, review count).
  */
-export interface AssistantProduct {
-  id: number;
-  name: string;
-  price: number;
-  shortDescription: string;
-  images: Record<string, string>;
-  sizes: string[];
-  colors: string[];
-  rating?: number;       // 0–5, optional — assistant may enrich
-  reviewCount?: number;  // optional
+export interface AssistantProduct extends ProductType {
+  rating?: number;
+  reviewCount?: number;
 }
 
-/** Converts a store `ProductType` to an `AssistantProduct`. */
-export function toAssistantProduct(p: ProductType): AssistantProduct {
-  return {
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    shortDescription: p.shortDescription,
-    images: p.images as Record<string, string>,
-    sizes: p.sizes,
-    colors: p.colors,
-  };
-}
+// ─── Message Model ───────────────────────────────────────────────────────────
 
-/** A single message within a conversation. */
 export interface Message {
   id: string;
   conversationId: string;
   role: MessageRole;
   content: MessageContentBlock[];
   createdAt: Date;
+  status?: MessageStatus;
+  metadata?: Record<string, unknown>;
 }
 
-// ─── Conversation Types ──────────────────────────────────────────────────────
+// ─── Conversation Models ─────────────────────────────────────────────────────
 
-export type ConversationStatus = "active" | "archived";
-
-/** A conversation (chat thread) between the user and the assistant. */
 export interface Conversation {
   id: string;
   title: string;
   status: ConversationStatus;
   createdAt: Date;
   updatedAt: Date;
+  metadata?: Record<string, unknown>;
 }
 
-/** Conversation with its messages fully loaded. */
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
 }
 
-// ─── Quick Action Types ──────────────────────────────────────────────────────
+export interface PaginatedConversations {
+  conversations: Conversation[];
+  hasMore: boolean;
+  nextCursor?: string;
+}
+
+// ─── Quick Action Model ──────────────────────────────────────────────────────
 
 export interface QuickAction {
   id: string;
   label: string;
-  icon: string;  // emoji or lucide icon name
-  prompt: string; // the message to send when clicked
+  icon: string;
+  prompt: string;
 }
 
-// ─── Service Request / Response Shapes ───────────────────────────────────────
+// ─── API Request Options & Signals ───────────────────────────────────────────
+
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
+
+// ─── Service Request & Response Contracts ────────────────────────────────────
+// Aligned with planned HTTP endpoints on `assistant-service` (Port :8004)
+
+export interface GetConversationsParams {
+  cursor?: string;
+  limit?: number;
+}
 
 export interface SendMessageRequest {
   conversationId: string;
@@ -100,5 +155,38 @@ export interface CreateConversationRequest {
 
 export interface CreateConversationResponse {
   conversation: Conversation;
-  messages: Message[]; // may include an initial assistant greeting
+  messages: Message[];
 }
+
+// ─── Typed Frontend Errors ───────────────────────────────────────────────────
+
+export class AssistantApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number = 500,
+    public code: string = "INTERNAL_ERROR"
+  ) {
+    super(message);
+    this.name = "AssistantApiError";
+  }
+}
+
+export class AssistantNetworkError extends Error {
+  constructor(message: string = "Network error connecting to Assistant Service") {
+    super(message);
+    this.name = "AssistantNetworkError";
+  }
+}
+
+export class AssistantAbortError extends Error {
+  constructor(message: string = "Assistant request was cancelled") {
+    super(message);
+    this.name = "AssistantAbortError";
+  }
+}
+
+export type AssistantError =
+  | AssistantApiError
+  | AssistantNetworkError
+  | AssistantAbortError
+  | Error;

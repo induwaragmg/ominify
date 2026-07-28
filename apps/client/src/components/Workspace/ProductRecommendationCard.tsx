@@ -15,8 +15,8 @@ export default function ProductRecommendationCard({
   product,
 }: ProductRecommendationCardProps): React.ReactNode {
   const { addToCart } = useCartStore();
-  const image =
-    Object.values(product.images)[0] ?? "/products/placeholder.png";
+  const imagesRecord = (product.images as Record<string, string> | undefined) ?? {};
+  const image = Object.values(imagesRecord)[0] ?? "/products/1g.png";
   const firstSize = product.sizes[0] ?? "Standard";
   const firstColor = product.colors[0] ?? "Default";
 

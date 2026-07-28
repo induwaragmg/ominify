@@ -1,6 +1,6 @@
 "use client";
 
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useAssistantStore from "@/stores/assistantStore";
 import { useEffect } from "react";
 import { MessageSquare, Plus, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -25,7 +25,7 @@ export default function ChatHistory(): React.ReactNode {
     fetchConversations,
     openConversation,
     createConversation,
-  } = useWorkspaceStore();
+  } = useAssistantStore();
 
   useEffect(() => {
     fetchConversations();

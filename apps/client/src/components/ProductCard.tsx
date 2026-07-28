@@ -157,7 +157,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
     //   </div>
     // </div>
    
-    <div className="group relative aspect-7/9 overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl">
+    <div className="group relative aspect-7/9 max-w-[288px] overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl">
       <Link
         href={`/products/${product.id}`}
         className=" absolute inset-x-0 top-0 bottom-25 z-10 block overflow-hidden"
@@ -175,7 +175,9 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       />
 
       {/* DARK GRADIENT */}
-      <div className="absolute inset-0 bg-linear-to-t from-brand/50 via-black/30 to-transparent" />
+      {/* <div className="absolute inset-0 bg-linear-to-t from-brand/50 via-black/30 to-transparent" /> */}
+      {/* <div className="absolute inset-0 bg-linear-to-t from-[color-mix(in_srgb,var(--color-brand)_90%,black)]/40 via-black/20 to-transparent" /> */}
+      <div className="absolute inset-0 bg-linear-to-t from-black/50 via-black/25 to-transparent" />
 
       {/* TOP BADGES */}
       <div className="absolute left-4 right-4 top-4 flex items-center justify-between">

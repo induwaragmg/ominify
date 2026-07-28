@@ -226,7 +226,7 @@ const ProductList = async ({
             className="
               grid
               gap-4
-              grid-cols-[repeat(auto-fit,minmax(250px,1fr))]
+              grid-cols-[repeat(auto-fill,minmax(250px,288px))]
             "
           > 
           {products.map((product) => (
@@ -268,12 +268,12 @@ const ProductList = async ({
         </div>
       </div>
 
-      <Link
+      {/* <Link
         href={category ? `/products/?category=${category}` : "/products"}
         className="flex justify-end mt-4 underline text-sm text-gray-500"
       >
         View all products
-      </Link>
+      </Link> */}
     </div>
   );
   }

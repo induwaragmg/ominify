@@ -1,6 +1,6 @@
 "use client";
 
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useWorkspaceUIStore from "@/stores/workspaceUIStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
@@ -61,7 +61,7 @@ export default function Workspace(): React.ReactNode {
     setAssistantWidth,
     closeAssistant,
     closeMobile,
-  } = useWorkspaceStore();
+  } = useWorkspaceUIStore();
 
   const [isResizing, setIsResizing] = useState(false);
   const asideRef = useRef<HTMLElement>(null);

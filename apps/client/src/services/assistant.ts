@@ -1,22 +1,27 @@
-// ─── Assistant Service Layer ─────────────────────────────────────────────────
-// Frontend service module that abstracts communication with the assistant
-// backend. Currently returns placeholder/demo data so the UI is fully
-// functional. When the real `assistant-service` microservice is deployed,
-// replace the function bodies with `fetch()` calls — the signatures and
-// return types stay identical.
+// ─── Assistant Service API Client ────────────────────────────────────────────
+// Service client module abstracting HTTP API communication with the upcoming
+// `assistant-service` microservice (defaulting to http://localhost:8004).
 //
-// All functions are async to match real network behaviour. The UI already
-// handles loading / error / streaming states around these calls.
+// All functions return typed Promises, throw typed errors (AssistantApiError,
+// AssistantNetworkError, AssistantAbortError), and support AbortSignal cancellation.
+// Currently returns temporary placeholder responses until the backend API is live.
 
 import type {
   Conversation,
   ConversationWithMessages,
   CreateConversationRequest,
   CreateConversationResponse,
+  GetConversationsParams,
   Message,
   QuickAction,
+  RequestOptions,
   SendMessageRequest,
   SendMessageResponse,
+} from "@/types/assistant";
+import {
+  AssistantAbortError,
+  AssistantApiError,
+  AssistantNetworkError,
 } from "@/types/assistant";
 
 // ─── Configuration ───────────────────────────────────────────────────────────
@@ -30,16 +35,42 @@ function uid(): string {
   return crypto.randomUUID();
 }
 
-/** Simulates network latency during the placeholder phase. */
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+/** Simulates network latency while respecting AbortSignal cancellation. */
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      return reject(new AssistantAbortError());
+    }
+
+    const timer = setTimeout(() => {
+      resolve();
+    }, ms);
+
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timer);
+      reject(new AssistantAbortError());
+    });
+  });
 }
 
-// ─── Placeholder Responses ───────────────────────────────────────────────────
-// These simulate what the real service would return. They exist solely so
-// the UI can be demonstrated end-to-end before the backend is ready.
+/** Handles errors and wraps unknown failures into typed AssistantErrors. */
+function handleServiceError(error: unknown): never {
+  if (
+    error instanceof AssistantApiError ||
+    error instanceof AssistantNetworkError ||
+    error instanceof AssistantAbortError
+  ) {
+    throw error;
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    throw new AssistantAbortError();
+  }
+  throw new AssistantApiError(
+    error instanceof Error ? error.message : "Unexpected assistant service error"
+  );
+}
 
-const PLACEHOLDER_REPLIES: Record<string, Message> = {};
+// ─── Temporary Placeholder Generator ─────────────────────────────────────────
 
 function buildPlaceholderReply(
   conversationId: string,
@@ -47,7 +78,6 @@ function buildPlaceholderReply(
 ): Message {
   const lower = userText.toLowerCase();
 
-  // Product recommendation demo
   if (
     lower.includes("drill") ||
     lower.includes("find") ||
@@ -58,10 +88,11 @@ function buildPlaceholderReply(
       id: uid(),
       conversationId,
       role: "assistant",
+      status: "sent",
       content: [
         {
           type: "text",
-          text: "I found some great options for you! Here are my top picks based on your needs:",
+          text: "I found some top-rated recommendations based on your needs:",
         },
         {
           type: "product_recommendations",
@@ -72,9 +103,13 @@ function buildPlaceholderReply(
               price: 9999,
               shortDescription:
                 "Compact, lightweight drill driver with LED light and 2-speed transmission.",
+              description: "High performance cordless drill.",
               images: { Yellow: "/products/1g.png" },
               sizes: ["Standard"],
               colors: ["Yellow"],
+              categorySlug: "tools",
+              createdAt: new Date(),
+              updatedAt: new Date(),
               rating: 4.8,
               reviewCount: 2341,
             },
@@ -84,9 +119,13 @@ function buildPlaceholderReply(
               price: 12999,
               shortDescription:
                 "Heavy-duty impact drill with 800W motor and auxiliary handle.",
+              description: "Professional grade impact driver.",
               images: { Blue: "/products/2w.png" },
               sizes: ["Standard"],
               colors: ["Blue"],
+              categorySlug: "tools",
+              createdAt: new Date(),
+              updatedAt: new Date(),
               rating: 4.6,
               reviewCount: 1892,
             },
@@ -102,10 +141,11 @@ function buildPlaceholderReply(
       id: uid(),
       conversationId,
       role: "assistant",
+      status: "sent",
       content: [
         {
           type: "text",
-          text: "I'd be happy to help you shop within your budget! What's your price range, and what type of product are you looking for? I'll find the best value options for you.",
+          text: "I can help you filter products by price range! What is your budget ceiling and target category?",
         },
       ],
       createdAt: new Date(),
@@ -117,274 +157,264 @@ function buildPlaceholderReply(
       id: uid(),
       conversationId,
       role: "assistant",
+      status: "sent",
       content: [
         {
           type: "text",
-          text: "Sure! Tell me which products you'd like to compare, or share a category and I'll pull up the top contenders with a side-by-side breakdown of features, specs, and pricing.",
+          text: "Which products would you like to compare side-by-side?",
         },
       ],
       createdAt: new Date(),
     };
   }
 
-  if (lower.includes("gift")) {
-    return {
-      id: uid(),
-      conversationId,
-      role: "assistant",
-      content: [
-        {
-          type: "text",
-          text: "Great choice! Who are you shopping for? Tell me a bit about them — their interests, age, and your budget — and I'll curate a personalized gift list.",
-        },
-      ],
-      createdAt: new Date(),
-    };
-  }
-
-  if (lower.includes("spec") || lower.includes("explain")) {
-    return {
-      id: uid(),
-      conversationId,
-      role: "assistant",
-      content: [
-        {
-          type: "text",
-          text: "I can help decode product specifications! Share a product name or link, and I'll break down the technical details in plain language so you can make an informed decision.",
-        },
-      ],
-      createdAt: new Date(),
-    };
-  }
-
-  // Default fallback
   return {
     id: uid(),
     conversationId,
     role: "assistant",
+    status: "sent",
     content: [
       {
         type: "text",
-        text: "Thanks for reaching out! I'm your Ominify shopping assistant. I can help you find products, compare options, shop within a budget, explain specifications, or suggest gift ideas. What would you like to do?",
+        text: "I am your Ominify AI Shopping Assistant. How can I assist your product search or order today?",
       },
     ],
     createdAt: new Date(),
   };
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ─── Public API Client Methods ───────────────────────────────────────────────
 
 /**
- * Fetch the list of recent conversations for the current user.
- *
- * TODO: Replace with `GET ${ASSISTANT_SERVICE_URL}/conversations`
+ * Fetch recent conversations.
+ * Backend contract: GET /conversations
  */
-export async function getConversations(): Promise<Conversation[]> {
-  void ASSISTANT_SERVICE_URL; // reference to suppress lint
-  await delay(300);
+export async function getConversations(
+  params?: GetConversationsParams,
+  options?: RequestOptions
+): Promise<Conversation[]> {
+  void ASSISTANT_SERVICE_URL;
+  void params;
 
-  return [
-    {
-      id: "demo-1",
-      title: "Buying a Drill",
-      status: "active",
-      createdAt: new Date(Date.now() - 86_400_000),
-      updatedAt: new Date(Date.now() - 86_400_000),
-    },
-    {
-      id: "demo-2",
-      title: "Running Shoes",
-      status: "active",
-      createdAt: new Date(Date.now() - 172_800_000),
-      updatedAt: new Date(Date.now() - 172_800_000),
-    },
-    {
-      id: "demo-3",
-      title: "Gift Ideas",
-      status: "active",
-      createdAt: new Date(Date.now() - 259_200_000),
-      updatedAt: new Date(Date.now() - 259_200_000),
-    },
-  ];
+  try {
+    await delay(300, options?.signal);
+
+    return [
+      {
+        id: "conv-1",
+        title: "Buying a Drill",
+        status: "active",
+        createdAt: new Date(Date.now() - 86_400_000),
+        updatedAt: new Date(Date.now() - 86_400_000),
+      },
+      {
+        id: "conv-2",
+        title: "Running Shoes",
+        status: "active",
+        createdAt: new Date(Date.now() - 172_800_000),
+        updatedAt: new Date(Date.now() - 172_800_000),
+      },
+    ];
+  } catch (error) {
+    return handleServiceError(error);
+  }
 }
 
 /**
- * Fetch a single conversation with all its messages.
- *
- * TODO: Replace with `GET ${ASSISTANT_SERVICE_URL}/conversations/:id`
+ * Fetch a single conversation with messages.
+ * Backend contract: GET /conversations/:id
  */
 export async function getConversation(
-  conversationId: string
+  conversationId: string,
+  options?: RequestOptions
 ): Promise<ConversationWithMessages> {
   void ASSISTANT_SERVICE_URL;
-  await delay(400);
 
-  return {
-    id: conversationId,
-    title:
-      conversationId === "demo-1"
-        ? "Buying a Drill"
-        : conversationId === "demo-2"
-          ? "Running Shoes"
-          : "Gift Ideas",
-    status: "active",
-    createdAt: new Date(Date.now() - 86_400_000),
-    updatedAt: new Date(),
-    messages: [
+  try {
+    await delay(400, options?.signal);
+
+    return {
+      id: conversationId,
+      title: conversationId === "conv-1" ? "Buying a Drill" : "Product Inquiry",
+      status: "active",
+      createdAt: new Date(Date.now() - 86_400_000),
+      updatedAt: new Date(),
+      messages: [
+        {
+          id: uid(),
+          conversationId,
+          role: "assistant",
+          status: "sent",
+          content: [
+            {
+              type: "text",
+              text: "Hello! 👋 How can I help you find the right items today?",
+            },
+          ],
+          createdAt: new Date(Date.now() - 86_400_000),
+        },
+      ],
+    };
+  } catch (error) {
+    return handleServiceError(error);
+  }
+}
+
+/**
+ * Create a new conversation.
+ * Backend contract: POST /conversations
+ */
+export async function createConversation(
+  request: CreateConversationRequest,
+  options?: RequestOptions
+): Promise<CreateConversationResponse> {
+  void ASSISTANT_SERVICE_URL;
+
+  try {
+    await delay(450, options?.signal);
+
+    const conversationId = uid();
+    const messages: Message[] = [
       {
         id: uid(),
         conversationId,
         role: "assistant",
+        status: "sent",
         content: [
           {
             type: "text",
-            text: "Hi there! 👋 I'm your Ominify assistant. How can I help you today?",
+            text: "Hello! 👋 How can I assist you with your shopping today?",
           },
         ],
-        createdAt: new Date(Date.now() - 86_400_000),
+        createdAt: new Date(),
       },
-    ],
-  };
-}
+    ];
 
-/**
- * Create a new conversation, optionally with an initial user message.
- *
- * TODO: Replace with `POST ${ASSISTANT_SERVICE_URL}/conversations`
- */
-export async function createConversation(
-  request: CreateConversationRequest
-): Promise<CreateConversationResponse> {
-  void ASSISTANT_SERVICE_URL;
-  await delay(500);
+    if (request.initialMessage) {
+      messages.push({
+        id: uid(),
+        conversationId,
+        role: "user",
+        status: "sent",
+        content: [{ type: "text", text: request.initialMessage }],
+        createdAt: new Date(),
+      });
 
-  const conversationId = uid();
-  const messages: Message[] = [];
+      const assistantReply = buildPlaceholderReply(
+        conversationId,
+        request.initialMessage
+      );
+      messages.push(assistantReply);
+    }
 
-  // Assistant greeting
-  messages.push({
-    id: uid(),
-    conversationId,
-    role: "assistant",
-    content: [
-      {
-        type: "text",
-        text: "Hi there! 👋 I'm your Ominify assistant. How can I help you today?",
+    return {
+      conversation: {
+        id: conversationId,
+        title: request.initialMessage?.slice(0, 40) || "New Chat",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
-    ],
-    createdAt: new Date(),
-  });
-
-  // If an initial message was provided, include user + assistant reply
-  if (request.initialMessage) {
-    const userMsg: Message = {
-      id: uid(),
-      conversationId,
-      role: "user",
-      content: [{ type: "text", text: request.initialMessage }],
-      createdAt: new Date(),
+      messages,
     };
-    messages.push(userMsg);
-
-    const assistantReply = buildPlaceholderReply(
-      conversationId,
-      request.initialMessage
-    );
-    messages.push(assistantReply);
+  } catch (error) {
+    return handleServiceError(error);
   }
-
-  return {
-    conversation: {
-      id: conversationId,
-      title: request.initialMessage?.slice(0, 40) || "New Chat",
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    messages,
-  };
 }
 
 /**
- * Send a message within an existing conversation and receive the
- * assistant's reply.
- *
- * TODO: Replace with `POST ${ASSISTANT_SERVICE_URL}/conversations/:id/messages`
+ * Send a message within a conversation.
+ * Backend contract: POST /conversations/:id/messages
  */
 export async function sendMessage(
-  request: SendMessageRequest
+  request: SendMessageRequest,
+  options?: RequestOptions
 ): Promise<SendMessageResponse> {
   void ASSISTANT_SERVICE_URL;
 
-  const userMessage: Message = {
-    id: uid(),
-    conversationId: request.conversationId,
-    role: "user",
-    content: [{ type: "text", text: request.content }],
-    createdAt: new Date(),
-  };
+  try {
+    const userMessage: Message = {
+      id: uid(),
+      conversationId: request.conversationId,
+      role: "user",
+      status: "sent",
+      content: [{ type: "text", text: request.content }],
+      createdAt: new Date(),
+    };
 
-  // Simulate assistant "thinking" time
-  await delay(800 + Math.random() * 800);
+    await delay(600, options?.signal);
 
-  const assistantMessage = buildPlaceholderReply(
-    request.conversationId,
-    request.content
-  );
+    const assistantMessage = buildPlaceholderReply(
+      request.conversationId,
+      request.content
+    );
 
-  return { userMessage, assistantMessage };
+    return { userMessage, assistantMessage };
+  } catch (error) {
+    return handleServiceError(error);
+  }
 }
 
 /**
  * Delete a conversation.
- *
- * TODO: Replace with `DELETE ${ASSISTANT_SERVICE_URL}/conversations/:id`
+ * Backend contract: DELETE /conversations/:id
  */
 export async function deleteConversation(
-  conversationId: string
+  conversationId: string,
+  options?: RequestOptions
 ): Promise<void> {
   void ASSISTANT_SERVICE_URL;
-  void conversationId;
-  await delay(200);
+
+  try {
+    await delay(200, options?.signal);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 }
 
 /**
- * Get the list of quick-action prompts displayed on the welcome screen.
- *
- * TODO: Replace with `GET ${ASSISTANT_SERVICE_URL}/quick-actions`
- *       or keep client-side if these are static.
+ * Fetch available quick actions.
+ * Backend contract: GET /quick-actions
  */
-export async function getQuickActions(): Promise<QuickAction[]> {
-  return [
-    {
-      id: "find",
-      label: "Find the right product",
-      icon: "🔍",
-      prompt: "Help me find the right product",
-    },
-    {
-      id: "compare",
-      label: "Compare products",
-      icon: "⚖️",
-      prompt: "I want to compare products",
-    },
-    {
-      id: "budget",
-      label: "Shop within my budget",
-      icon: "💰",
-      prompt: "Help me shop within my budget",
-    },
-    {
-      id: "specs",
-      label: "Explain specifications",
-      icon: "📋",
-      prompt: "Can you explain specifications for me?",
-    },
-    {
-      id: "gifts",
-      label: "Gift ideas",
-      icon: "🎁",
-      prompt: "I need gift ideas",
-    },
-  ];
+export async function getQuickActions(
+  options?: RequestOptions
+): Promise<QuickAction[]> {
+  try {
+    await delay(150, options?.signal);
+
+    return [
+      {
+        id: "find",
+        label: "Find the right product",
+        icon: "🔍",
+        prompt: "Help me find the right product",
+      },
+      {
+        id: "compare",
+        label: "Compare products",
+        icon: "⚖️",
+        prompt: "I want to compare products",
+      },
+      {
+        id: "budget",
+        label: "Shop within my budget",
+        icon: "💰",
+        prompt: "Help me shop within my budget",
+      },
+      {
+        id: "specs",
+        label: "Explain specifications",
+        icon: "📋",
+        prompt: "Can you explain specifications for me?",
+      },
+      {
+        id: "gifts",
+        label: "Gift ideas",
+        icon: "🎁",
+        prompt: "I need gift ideas",
+      },
+    ];
+  } catch (error) {
+    return handleServiceError(error);
+  }
 }

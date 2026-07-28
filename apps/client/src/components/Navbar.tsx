@@ -7,10 +7,10 @@ import ShoppingCartIcon from "./ShoppingCartIcon";
 import { Show } from "@clerk/nextjs";
 import ProfileButton from "./ProfileButton";
 import { SidebarTrigger } from "./ui/sidebar";
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useWorkspaceUIStore from "@/stores/workspaceUIStore";
 
 const Navbar = (): JSX.Element => {
-  const { toggleAssistant, isAssistantOpen, isMobileOpen } = useWorkspaceStore();
+  const { toggleAssistant, isAssistantOpen, isMobileOpen } = useWorkspaceUIStore();
   const isOpen = isAssistantOpen || isMobileOpen;
 
   return (

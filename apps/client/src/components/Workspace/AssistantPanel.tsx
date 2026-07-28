@@ -1,6 +1,6 @@
 "use client";
 
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useAssistantStore from "@/stores/assistantStore";
 import { Bot, ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -18,7 +18,7 @@ export default function AssistantPanel(): React.ReactNode {
     error,
     goBackToWelcome,
     clearError,
-  } = useWorkspaceStore();
+  } = useAssistantStore();
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +77,7 @@ export default function AssistantPanel(): React.ReactNode {
           {/* Error Banner */}
           {error && (
             <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
-              <span>{error}</span>
+              <span>{error instanceof Error ? error.message : String(error)}</span>
               <button
                 type="button"
                 onClick={clearError}

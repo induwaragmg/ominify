@@ -1,13 +1,13 @@
 "use client";
 
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useAssistantStore from "@/stores/assistantStore";
 import { Paperclip, ArrowUp } from "lucide-react";
 import { useState, useCallback, type KeyboardEvent } from "react";
 
 export default function ChatInput(): React.ReactNode {
   const [value, setValue] = useState("");
   const { sendMessage, createConversation, activeConversation, isSending } =
-    useWorkspaceStore();
+    useAssistantStore();
 
   const handleSubmit = useCallback(async () => {
     const trimmed = value.trim();

@@ -1,12 +1,12 @@
 "use client";
 
-import useWorkspaceStore from "@/stores/workspaceStore";
+import useAssistantStore from "@/stores/assistantStore";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 
 export default function QuickActions(): React.ReactNode {
   const { quickActions, fetchQuickActions, createConversation } =
-    useWorkspaceStore();
+    useAssistantStore();
 
   useEffect(() => {
     if (quickActions.length === 0) {
