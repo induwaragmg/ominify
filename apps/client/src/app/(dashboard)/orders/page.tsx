@@ -79,7 +79,7 @@ const getProductImage = (
   return images?.[selectedColor] || Object.values(images || {})[0] || "";
 };
 
-const OrdersPage = async () => {
+const OrdersPage = async (): Promise<React.ReactNode> => {
   try {
     const [orders, products] = await Promise.all([
       fetchOrders(),

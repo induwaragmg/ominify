@@ -166,7 +166,8 @@ const fetchData = async ({
   return data;
 };
 
-const ProductList = async ({
+// TODO: temporary put 'any' later fix this ############
+const ProductList : any = async ({
   category,
   sort,
   search,
@@ -177,31 +178,6 @@ const ProductList = async ({
   search?: string;
   params: "homepage" | "products";
 }) => {
-  // const products = await fetchData({ category, sort, search, params });
-  // try {
-  // } catch (error) {
-  //   console.error("Error fetching products:", error);
-  //   return <div className="text-red-500">Failed to load products. Please try again later.</div>;
-  // }
-  // return (
-  //   <div className="w-full">
-  //     <Categories />
-  //     {params === "products" && <Filter />}
-  //     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8">
-  //       {products !== null ? products.map((product) => (
-  //         <ProductCard key={product.id} product={product} />
-  //       )) : <h2 className="text-gray-500">No products found.</h2>}
-  //     </div>
-  //     <Link
-  //       href={category ? `/products/?category=${category}` : "/products"}
-  //       className="flex justify-end mt-4 underline text-sm text-gray-500"
-  //     >
-  //       View all products
-  //     </Link>
-  //   </div>
-  // );
-
-
   try {
     const products = await fetchData({
       category,
@@ -226,7 +202,8 @@ const ProductList = async ({
             className="
               grid
               gap-4
-              grid-cols-[repeat(auto-fill,minmax(250px,288px))]
+              grid-cols-2
+              sm:grid-cols-[repeat(auto-fit,minmax(250px,1fr))]
             "
           // className="
           //   grid

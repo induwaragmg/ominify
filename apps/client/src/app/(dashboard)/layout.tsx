@@ -11,7 +11,7 @@ export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}): React.ReactNode {
   return (
     <SidebarProvider>
       <AppSidebar />

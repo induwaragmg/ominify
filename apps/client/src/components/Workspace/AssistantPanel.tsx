@@ -3,7 +3,7 @@
 import useAssistantStore from "@/stores/assistantStore";
 import type { StreamingPhase } from "@/types/assistant";
 import { useAuth } from "@clerk/nextjs";
-import { Bot, ArrowLeft, Loader2, Brain, Search, Wrench, Sparkles, MessageSquare, ArrowDown, LogIn } from "lucide-react";
+import { Bot, ArrowLeft, Loader2, Brain, Search, Wrench, Sparkles, MessageSquare, ArrowDown, LogIn, WifiOff, RefreshCw, Unlink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -63,10 +63,6 @@ function StreamingIndicator(): React.ReactNode {
     >
       {/* Bot header */}
       <div className="flex items-center gap-1.5 px-0.5">
-        {/* <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">
-          <Bot className="h-3 w-3" />
-        </div>
-        <span className="text-[11px] font-medium text-gray-500">Ominify AI</span> */}
         <div className="relative h-5 w-5 shrink-0 items-center justify-center rounded-full">
           <Image src="/icon.svg" alt="Ominify AI" fill className="object-contain" />
         </div>
@@ -138,6 +134,89 @@ function UnauthenticatedGate(): React.ReactNode {
   );
 }
 
+// ─── Service Offline Gate Component ──────────────────────────────────────────
+// Industry-standard offline pattern matching Ominify design system
+
+function ServiceOfflineGate(): React.ReactNode {
+  const { isCheckingHealth, checkServiceHealth } = useAssistantStore();
+
+  return (
+    <div className="mx-4 my-auto flex flex-col items-center justify-center rounded-3xl border border-gray-200/70 bg-gray-50/60 p-7 text-center shadow-xs">
+      {/* Grayed-out icon badge with red offline accent */}
+      <div className="relative mb-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 border border-gray-200 shadow-xs">
+          <Unlink className="h-6 w-6 text-gray-400" />
+        </div>
+        
+      </div>
+
+      <h4 className="text-base font-bold text-gray-800 tracking-tight">
+        Assistant Service is Offline
+      </h4>
+      <p className="mt-2 text-xs text-gray-500 leading-relaxed max-w-[290px]">
+        We can&apos;t connect to the AI assistant right now. The service may be starting up or temporarily offline.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => checkServiceHealth()}
+        disabled={isCheckingHealth}
+        className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-brand/80 hover:shadow-md active:scale-98 disabled:opacity-60 cursor-pointer"
+      >
+        <RefreshCw className={`h-3.5 w-3.5 ${isCheckingHealth ? "animate-spin" : ""}`} />
+        {isCheckingHealth ? "Connecting..." : "Retry Connection"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Inline Connection Error Card (for in-chat errors) ──────────────────────
+
+function ConnectionErrorCard(): React.ReactNode {
+  const { error, isCheckingHealth, checkServiceHealth, clearError } = useAssistantStore();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 flex flex-col gap-2.5 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-xs"
+    >
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-200 text-gray-600">
+          <WifiOff className="h-3.5 w-3.5 text-red-500" />
+        </div>
+        <span className="text-xs font-semibold text-gray-800">Assistant Connection Lost</span>
+      </div>
+      <p className="text-[11px] text-gray-600 leading-relaxed">
+        {error instanceof Error
+          ? error.message
+          : "Unable to reach the assistant service. Please check if the backend service is active."}
+      </p>
+      <div className="flex items-center gap-3 pt-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            clearError();
+            checkServiceHealth();
+          }}
+          disabled={isCheckingHealth}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:opacity-60 cursor-pointer"
+        >
+          <RefreshCw className={`h-3 w-3 ${isCheckingHealth ? "animate-spin" : ""}`} />
+          {isCheckingHealth ? "Connecting..." : "Retry"}
+        </button>
+        <button
+          type="button"
+          onClick={clearError}
+          className="text-[11px] text-gray-500 hover:text-gray-800 underline cursor-pointer"
+        >
+          Dismiss
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Assistant Panel ─────────────────────────────────────────────────────────
 
 export default function AssistantPanel(): React.ReactNode {
@@ -146,14 +225,20 @@ export default function AssistantPanel(): React.ReactNode {
     isLoadingMessages,
     isSending,
     error,
+    isOffline,
     streamingPhase,
     goBackToWelcome,
-    clearError,
+    checkServiceHealth,
   } = useAssistantStore();
 
   const { isSignedIn, isLoaded } = useAuth();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+
+  // Check service health on mount
+  useEffect(() => {
+    checkServiceHealth();
+  }, [checkServiceHealth]);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -170,7 +255,7 @@ export default function AssistantPanel(): React.ReactNode {
       const container = chatContainerRef.current;
       const isNearBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-      
+
       if (isNearBottom || isSending) {
         scrollToBottom();
       }
@@ -208,6 +293,13 @@ export default function AssistantPanel(): React.ReactNode {
               {activeConversation.title}
             </h3>
           </div>
+          {/* Inline offline indicator in chat header */}
+          {isOffline && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 border border-red-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              Offline
+            </span>
+          )}
         </div>
 
         {/* Messages - Internal Scroll Container (Centered max-w-3xl) */}
@@ -234,19 +326,8 @@ export default function AssistantPanel(): React.ReactNode {
               </div>
             )}
 
-            {/* Error Banner */}
-            {error && (
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
-                <span>{error instanceof Error ? error.message : String(error)}</span>
-                <button
-                  type="button"
-                  onClick={clearError}
-                  className="font-medium underline"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
+            {/* Connection Error Card — shown when error or offline in chat */}
+            {(error || isOffline) && <ConnectionErrorCard />}
           </div>
         </div>
 
@@ -282,27 +363,22 @@ export default function AssistantPanel(): React.ReactNode {
     <div className="flex h-full flex-1 flex-col min-h-0">
       <div className="max-w-3xl mx-auto w-full flex flex-col h-full min-h-0">
         {/* Header */}
-        <div className="flex  shrink-0 items-start px-4 py-4">
-          <div className="relative h-9 w-9 bg-[#f8f9fb] shrink-0 items-center  justify-center rounded-md">
+        <div className="flex shrink-0 items-center justify-center px-4 py-4">
+          <div className="relative h-6 w-7 shrink-0 items-center justify-center rounded-md">
             <Image src="/icon.svg" alt="Ominify AI" fill className="object-contain" />
           </div>
           <div className="flex flex-col pl-2">
             <h3 className="text-sm font-semibold text-brand">
-              Ominify Assistant
+              Ominify AI
             </h3>
-            {/* <span className="text-xs font-medium text-brand">Ominify AI</span> */}
-            <div className="flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${isLoaded && !isSignedIn ? "bg-red-400" : "bg-emerald-400"}`} />
-              <span className={`text-[11px] ${isLoaded && !isSignedIn ? "text-red-600" : "text-gray-400"}`}>
-                {isLoaded && !isSignedIn ? "Sign In Required" : "Online"}
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* If Auth is loaded and user is signed out, show Sign In Gate */}
+        {/* Priority: Auth gate > Offline gate > Normal content */}
         {isLoaded && !isSignedIn ? (
           <UnauthenticatedGate />
+        ) : isOffline ? (
+          <ServiceOfflineGate />
         ) : (
           <>
             {/* Scrollable Content */}

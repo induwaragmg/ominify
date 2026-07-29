@@ -166,7 +166,7 @@ const QuickLink = ({
 );
 
 // ─── Main Page ──────────────────────────────────────────────────────────────────
-const AccountSettingsPage = (): React.JSX.Element => {
+const AccountSettingsPage = (): React.ReactNode => {
   const { user, isLoaded } = useUser();
   const { signOut } = useAuth();
 

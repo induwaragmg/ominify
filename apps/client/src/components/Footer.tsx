@@ -50,8 +50,8 @@ const Footer = () => {
           <Link href="/">Blog</Link>
           <Link href="/">Affiliate Program</Link>
         </div>
- 
-       
+
+
         <div className="flex flex-col gap-4 text-sm text-gray-400 items-center md:items-start">
           <Link href="/">Help Center</Link>
           <Link href="/">Track Order</Link>
@@ -66,7 +66,7 @@ const Footer = () => {
           <Link href="/">Partners</Link>
         </div>
 
-      
+
       </div>
     </div>
   )

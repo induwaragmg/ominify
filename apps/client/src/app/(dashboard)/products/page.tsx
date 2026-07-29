@@ -4,7 +4,7 @@ const ProductsPage = async ({
   searchParams,
 }: {
   searchParams: Promise<{ category: string; sort: string; search: string}>;
-}) => {
+}): Promise<React.ReactNode> => {
   const category = (await searchParams).category;
   const sort = (await searchParams).sort;
   const search = (await searchParams).search;

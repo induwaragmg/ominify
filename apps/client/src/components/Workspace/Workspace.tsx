@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import RightSidebar from "../RightSidebar";
 import AssistantPanel from "./AssistantPanel";
 
-const MIN_ASSISTANT_WIDTH = 320;
+const MIN_ASSISTANT_WIDTH = 360; // Matches right sidebar width (w-90 = 360px)
 const MAX_ASSISTANT_PANEL_WIDTH = 720;
 const MIN_MAIN_CONTENT_WIDTH = 480;
 

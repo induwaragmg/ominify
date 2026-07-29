@@ -12,7 +12,7 @@ import type {
   SSELLMChunkEvent,
   SSEToolStartEvent,
 } from "@/types/assistant";
-import { AssistantAbortError } from "@/types/assistant";
+import { AssistantAbortError, AssistantNetworkError } from "@/types/assistant";
 import * as assistantService from "@/services/assistant";
 import { create } from "zustand";
 
@@ -45,6 +45,10 @@ interface AssistantState {
   streamingText: string;
   streamingTools: string[];
   streamingToolCount: number;
+
+  // Offline / Service health state
+  isOffline: boolean;
+  isCheckingHealth: boolean;
 }
 
 interface AssistantActions {
@@ -54,9 +58,18 @@ interface AssistantActions {
   createConversation: (initialMessage?: string, token?: string | null) => Promise<void>;
   sendMessage: (content: string, token?: string | null) => Promise<void>;
   deleteConversation: (conversationId: string, token?: string | null) => Promise<void>;
+  checkServiceHealth: () => Promise<boolean>;
   cancelActiveRequest: () => void;
   goBackToWelcome: () => void;
   clearError: () => void;
+}
+
+/** Helper: detect if an error is a network / connectivity error */
+function isNetworkError(e: unknown): boolean {
+  return (
+    e instanceof AssistantNetworkError ||
+    (e instanceof TypeError && e.message.includes("fetch"))
+  );
 }
 
 export const useAssistantStore = create<AssistantState & AssistantActions>()(
@@ -78,6 +91,10 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
     streamingTools: [],
     streamingToolCount: 0,
 
+    // Offline / Service health state
+    isOffline: false,
+    isCheckingHealth: false,
+
     // ── Actions ──────────────────────────────────────────────────────────────
 
     fetchConversations: async (token) => {
@@ -98,6 +115,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
           conversations,
           isLoadingConversations: false,
           status: "idle",
+          isOffline: false,
           activeAbortController: null,
         });
       } catch (e) {
@@ -107,6 +125,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         }
         set({
           error: e instanceof Error ? e : new Error(String(e)),
+          isOffline: isNetworkError(e) ? true : get().isOffline,
           isLoadingConversations: false,
           status: "error",
           activeAbortController: null,
@@ -141,6 +160,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
           activeConversation: conversation,
           isLoadingMessages: false,
           status: "idle",
+          isOffline: false,
           activeAbortController: null,
         });
       } catch (e) {
@@ -150,6 +170,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         }
         set({
           error: e instanceof Error ? e : new Error(String(e)),
+          isOffline: isNetworkError(e) ? true : get().isOffline,
           isLoadingMessages: false,
           status: "error",
           activeAbortController: null,
@@ -178,6 +199,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
           conversations: [conversation, ...s.conversations],
           isLoadingMessages: false,
           status: "idle",
+          isOffline: false,
           activeAbortController: null,
         }));
 
@@ -192,6 +214,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         }
         set({
           error: e instanceof Error ? e : new Error(String(e)),
+          isOffline: isNetworkError(e) ? true : get().isOffline,
           isLoadingMessages: false,
           status: "error",
           activeAbortController: null,
@@ -226,12 +249,12 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         streamingToolCount: 0,
         activeConversation: s.activeConversation
           ? {
-              ...s.activeConversation,
-              messages: [
-                ...s.activeConversation.messages,
-                optimisticUserMsg,
-              ],
-            }
+            ...s.activeConversation,
+            messages: [
+              ...s.activeConversation.messages,
+              optimisticUserMsg,
+            ],
+          }
           : null,
       }));
 
@@ -240,13 +263,13 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         set((s) => ({
           activeConversation: s.activeConversation
             ? {
-                ...s.activeConversation,
-                messages: s.activeConversation.messages.map((m) =>
-                  m.id === optimisticUserMsg.id
-                    ? { ...m, status: "sent" as const }
-                    : m,
-                ),
-              }
+              ...s.activeConversation,
+              messages: s.activeConversation.messages.map((m) =>
+                m.id === optimisticUserMsg.id
+                  ? { ...m, status: "sent" as const }
+                  : m,
+              ),
+            }
             : null,
         }));
 
@@ -315,6 +338,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
               set((s) => ({
                 isSending: false,
                 status: "idle",
+                isOffline: false,
                 activeAbortController: null,
                 streamingPhase: "idle",
                 streamingText: "",
@@ -322,12 +346,12 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
                 streamingToolCount: 0,
                 activeConversation: s.activeConversation
                   ? {
-                      ...s.activeConversation,
-                      messages: [
-                        ...s.activeConversation.messages,
-                        assistantMessage,
-                      ],
-                    }
+                    ...s.activeConversation,
+                    messages: [
+                      ...s.activeConversation.messages,
+                      assistantMessage,
+                    ],
+                  }
                   : null,
               }));
               break;
@@ -356,9 +380,9 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
               streamingTools: [],
               activeConversation: s.activeConversation
                 ? {
-                    ...s.activeConversation,
-                    messages: [...s.activeConversation.messages, partialMessage],
-                  }
+                  ...s.activeConversation,
+                  messages: [...s.activeConversation.messages, partialMessage],
+                }
                 : null,
             }));
           } else {
@@ -376,6 +400,7 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
         set({
           isSending: false,
           status: "error",
+          isOffline: isNetworkError(e) ? true : get().isOffline,
           error: e instanceof Error ? e : new Error(String(e)),
           activeAbortController: null,
           streamingPhase: "idle",
@@ -400,9 +425,22 @@ export const useAssistantStore = create<AssistantState & AssistantActions>()(
       } catch (e) {
         set({
           error: e instanceof Error ? e : new Error(String(e)),
+          isOffline: isNetworkError(e) ? true : get().isOffline,
           status: "error",
         });
       }
+    },
+
+    checkServiceHealth: async () => {
+      set({ isCheckingHealth: true });
+      const isHealthy = await assistantService.checkHealth();
+      set({
+        isOffline: !isHealthy,
+        isCheckingHealth: false,
+        // Clear error if service came back online
+        ...(isHealthy ? { error: null, status: "idle" as const } : {}),
+      });
+      return isHealthy;
     },
 
     cancelActiveRequest: () => {

@@ -53,6 +53,55 @@ const useCartStore = create<CartStoreStateType & CartStoreActionsType>()(
           ),
         })),
 
+      updateCartItem: (oldItem, updates) =>
+        set((state) => {
+          const oldIndex = state.cart.findIndex(
+            (p) =>
+              p.id === oldItem.id &&
+              p.selectedSize === oldItem.selectedSize &&
+              p.selectedColor === oldItem.selectedColor
+          );
+
+          if (oldIndex === -1) return state;
+
+          const newSize = updates.selectedSize ?? oldItem.selectedSize;
+          const newColor = updates.selectedColor ?? oldItem.selectedColor;
+          const newQuantity = updates.quantity ?? oldItem.quantity;
+
+          if (newQuantity <= 0) {
+            return {
+              cart: state.cart.filter((_, index) => index !== oldIndex),
+            };
+          }
+
+          const existingTargetIndex = state.cart.findIndex(
+            (p, index) =>
+              index !== oldIndex &&
+              p.id === oldItem.id &&
+              p.selectedSize === newSize &&
+              p.selectedColor === newColor
+          );
+
+          const updatedCart = [...state.cart];
+
+          if (existingTargetIndex !== -1) {
+            updatedCart[existingTargetIndex] = {
+              ...updatedCart[existingTargetIndex]!,
+              quantity: updatedCart[existingTargetIndex]!.quantity + newQuantity,
+            };
+            updatedCart.splice(oldIndex, 1);
+          } else {
+            updatedCart[oldIndex] = {
+              ...updatedCart[oldIndex]!,
+              selectedSize: newSize,
+              selectedColor: newColor,
+              quantity: newQuantity,
+            };
+          }
+
+          return { cart: updatedCart };
+        }),
+
       // this action is used to clear the cart, we will use it after the user completes the order to clear the cart for the next order
       clearCart: () => set({ cart: [] }),
     }),

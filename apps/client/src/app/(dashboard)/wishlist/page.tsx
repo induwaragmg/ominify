@@ -7,7 +7,7 @@ import { Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 
-const WishlistPage = () => {
+const WishlistPage = (): React.ReactNode => {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { fetchWishlist, hasLoaded, isLoading, products } = useWishlistStore();
 

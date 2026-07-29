@@ -36,7 +36,7 @@ function getItemImage(item: CartItemType): string {
 export default function RightSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { cart, removeFromCart } = useCartStore();
+  const { cart, removeFromCart, updateCartItem } = useCartStore();
 
    if (pathname !== "/") {
     return null;
@@ -134,7 +134,9 @@ export default function RightSidebar() {
                         <button
                           type="button"
                           aria-label="Decrease quantity"
-                          className="flex size-5 items-center justify-center rounded-full hover:bg-gray-100"
+                          onClick={() => updateCartItem(item, { quantity: Math.max(1, item.quantity - 1) })}
+                          disabled={item.quantity <= 1}
+                          className="flex size-5 items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
                         >
                           <Minus className="size-3" />
                         </button>
@@ -144,7 +146,8 @@ export default function RightSidebar() {
                         <button
                           type="button"
                           aria-label="Increase quantity"
-                          className="flex size-5 items-center justify-center rounded-full hover:bg-gray-100"
+                          onClick={() => updateCartItem(item, { quantity: item.quantity + 1 })}
+                          className="flex size-5 items-center justify-center rounded-full hover:bg-gray-100 cursor-pointer"
                         >
                           <Plus className="size-3" />
                         </button>

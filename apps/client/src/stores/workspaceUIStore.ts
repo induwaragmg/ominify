@@ -48,7 +48,7 @@ export const useWorkspaceUIStore = create<
   closeMobile: () =>
     set({ isAssistantOpen: false, isMobileOpen: false }),
 
-  setAssistantWidth: (width) => set({ assistantWidth: width }),
+  setAssistantWidth: (width) => set({ assistantWidth: Math.max(360, width) }),
 
   setIsResizing: (isResizing) => set({ isResizing }),
 }));

@@ -6,7 +6,7 @@ const ReturnPage = async ({
   searchParams,
 }: {
   searchParams: Promise<{ session_id?: string }> | undefined;
-}): Promise<JSX.Element> => {
+}): Promise<React.ReactNode> => {
   const sessionId = (await searchParams)?.session_id;
 
   if (!sessionId) {

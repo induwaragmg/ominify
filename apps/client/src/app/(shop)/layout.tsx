@@ -11,7 +11,7 @@ export default function ShopLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}): React.ReactNode {
   return (
     <SidebarProvider className="">
       <AppSidebar />

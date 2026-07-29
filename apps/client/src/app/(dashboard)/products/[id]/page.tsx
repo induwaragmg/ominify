@@ -56,7 +56,7 @@ const ProductPage = async ({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ color: string; size: string }>;
-}) => {
+}) : Promise<React.ReactNode> => {
   try {
     const { size, color } = await searchParams;
     const { id } = await params;
@@ -73,7 +73,7 @@ const ProductPage = async ({
     ];
 
     return (
-      <div className="px-10 grid gap-8 py-8 lg:grid-cols-12 lg:gap-12 lg:py-12 mr-50">
+      <div className="px-4 sm:px-6 md:px-8 grid gap-8 py-6 lg:grid-cols-12 lg:gap-12 lg:py-12">
         {/* IMAGE */}
         <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-100 bg-gray-50 lg:col-span-5 lg:aspect-[4/5]">
           {imageSrc ? (

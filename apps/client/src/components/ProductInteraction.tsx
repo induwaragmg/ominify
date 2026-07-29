@@ -95,18 +95,16 @@ const ProductInteraction = ({
         <div className="flex items-center gap-2">
           {product.sizes.map((size) => (
             <div
-              className={`cursor-pointer border rounded-full  ${
-                selectedSize === size ? " ring-2 ring-gray-400" : "border-gray-300"
-              }`}
+              className={`cursor-pointer border rounded-full  ${selectedSize === size ? " ring-2 ring-gray-400" : "border-gray-300"
+                }`}
               key={size}
               onClick={() => handleTypeChange("size", size)}
             >
               <div
-                className={`w-6 h-6 text-center rounded-full flex items-center justify-center ${
-                  selectedSize === size
+                className={`w-6 h-6 text-center rounded-full flex items-center justify-center ${selectedSize === size
                     ? "bg-brand text-white"
                     : "bg-white text-black"
-                }`}
+                  }`}
               >
                 {size.toUpperCase()}
               </div>
@@ -120,9 +118,8 @@ const ProductInteraction = ({
         <div className="flex items-center gap-2">
           {product.colors.map((color) => (
             <div
-              className={`cursor-pointer rounded-full border  ${
-                selectedColor === color ? "ring-2 ring-gray-400" : "border-white"
-              }`}
+              className={`cursor-pointer rounded-full border  ${selectedColor === color ? "ring-2 ring-gray-400" : "border-white"
+                }`}
               key={color}
               onClick={() => handleTypeChange("color", color)}
             >
@@ -151,27 +148,26 @@ const ProductInteraction = ({
         </div>
       </div>
       {/* BUTTONS */}
-     <div className="flex gap-4">
-      <button
-        onClick={handleAddToCart}
-        className="bg-brand flex-1 text-white px-4 py-2 rounded-md shadow-lg flex items-center justify-center gap-2 cursor-pointer text-sm font-medium"
-      >
-        <Plus className="w-4 h-4" />
-        Add to Cart
-      </button>
-      <button className=" flex-1 ring-1 ring-gray-400 shadow-lg text-gray-800 px-4 py-2 rounded-md flex items-center justify-center cursor-pointer gap-2 text-sm font-medium">
-        <ShoppingCart className="w-4 h-4" />
-        Buy this Item
-      </button>
-     </div>
+      <div className="flex gap-4">
+        <button
+          onClick={handleAddToCart}
+          className="bg-brand flex-1 text-white px-4 py-2 rounded-md shadow-lg flex items-center justify-center gap-2 cursor-pointer text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          Add to Cart
+        </button>
+        <button className=" flex-1 ring-1 ring-gray-400 shadow-lg text-gray-800 px-4 py-2 rounded-md flex items-center justify-center cursor-pointer gap-2 text-sm font-medium">
+          <ShoppingCart className="w-4 h-4" />
+          Buy this Item
+        </button>
+      </div>
       <button
         onClick={handleWishlist}
-        className="ring-1 ring-gray-400 shadow-lg text-gray-800 px-4 py-2 rounded-md flex items-center justify-center cursor-pointer gap-2 text-sm font-medium"
+        className="ring-1 ring-gray-300 shadow-lg text-gray-800 px-4 py-2 rounded-full flex items-center justify-center cursor-pointer gap-2 text-sm font-medium"
       >
         <Heart
-          className={`w-4 h-4 ${
-            isWishlisted ? "fill-red-500 text-red-500" : ""
-          }`}
+          className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : ""
+            }`}
         />
         {isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
       </button>

@@ -17,7 +17,7 @@ export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>): React.ReactNode {
   return (
     <ClerkProvider>
       <html lang="en" className="h-full">

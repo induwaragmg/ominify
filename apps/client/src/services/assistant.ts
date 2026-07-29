@@ -413,3 +413,22 @@ export async function getQuickActions(
     },
   ];
 }
+
+/**
+ * Health check — lightweight probe to see if the assistant microservice is reachable.
+ * Falls back to the base URL root if /health doesn't exist (any 2xx/3xx = alive).
+ */
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timerId = setTimeout(() => controller.abort(), 3500);
+    const response = await fetch(`${ASSISTANT_SERVICE_URL}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    clearTimeout(timerId);
+    return response.ok || response.status === 404; // 404 means server is up but no /health route
+  } catch {
+    return false;
+  }
+}

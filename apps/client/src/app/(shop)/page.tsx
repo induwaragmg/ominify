@@ -5,7 +5,7 @@ const Homepage = async ({
   searchParams,
 }: {
   searchParams: Promise<{ category: string }>;
-}): Promise<JSX.Element> => {
+}): Promise<React.ReactNode> => {
   const category = (await searchParams).category;
 
   return (

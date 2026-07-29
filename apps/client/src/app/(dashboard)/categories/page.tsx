@@ -40,7 +40,7 @@ const DEPT_ICONS: Record<string, LucideIcon> = {
   LayoutGrid,
 };
 
-const CategoriesPage = (): JSX.Element => {
+const CategoriesPage = (): React.ReactNode => {
   const totalSubCategories = DEPARTMENTS.reduce(
     (sum, d) => sum + d.subCategories.length,
     0

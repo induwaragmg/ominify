@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function SignUpPage() {
+export default function SignUpPage(): React.ReactNode {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden font-sans bg-[#f8f9fb]">
       {/* 1. Blurred Storefront Background (Matches 895px Home Carousel Width) */}
