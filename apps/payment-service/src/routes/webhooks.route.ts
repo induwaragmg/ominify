@@ -22,7 +22,12 @@ webhookRoute.post("/stripe", async (c) => {
     switch (event.type) {
         case "checkout.session.completed":
             const session = event.data.object as Stripe.Checkout.Session;
-            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+            const lineItems = await stripe.checkout.sessions.listLineItems(
+                session.id,
+                {
+                    expand: ["data.price.product"],
+                }
+            );
 
             // TODO: create order
             console.log("#######################################\n webhook received", session, "\n##################################");
@@ -32,11 +37,28 @@ webhookRoute.post("/stripe", async (c) => {
                     email: session.customer_details?.email,
                     amount: session.amount_total,
                     status: session.payment_status === "paid" ? "success" : "failed",
-                    products: lineItems.data.map((item) => ({
-                        name: item.description,
-                        quantity: item.quantity,
-                        price: item.price?.unit_amount,
-                    })),
+                    products: lineItems.data.map((item) => {
+                        const stripeProduct = item.price?.product as
+                            | Stripe.Product
+                            | string
+                            | null;
+                        const metadata =
+                            typeof stripeProduct === "object" && stripeProduct
+                                ? stripeProduct.metadata
+                                : {};
+
+                        return {
+                            productId: metadata.productId
+                                ? Number(metadata.productId)
+                                : undefined,
+                            name: item.description,
+                            quantity: item.quantity,
+                            price: item.price?.unit_amount,
+                            image: metadata.image,
+                            selectedColor: metadata.selectedColor,
+                            selectedSize: metadata.selectedSize,
+                        };
+                    }),
                     //shipping address
                 }
             })

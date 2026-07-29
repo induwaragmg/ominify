@@ -12,9 +12,13 @@ const OrderSchema = new Schema(
     products: {
       type: [
         {
+          productId: { type: Number },
           name: { type: String, required: true },
           quantity: { type: Number, required: true },
           price: { type: Number, required: true },
+          image: { type: String },
+          selectedColor: { type: String },
+          selectedSize: { type: String },
         },
       ],
       required: true,

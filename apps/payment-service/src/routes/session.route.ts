@@ -18,6 +18,15 @@ sessionRoute.post('/create-checkout-session', shouldBeUser, async (c) => {
           currency: 'usd',
           product_data: {
             name: item.name,
+            metadata: {
+              productId: String(item.id),
+              image:
+                (item.images as Record<string, string>)?.[
+                  item.selectedColor
+                ] || "",
+              selectedColor: item.selectedColor,
+              selectedSize: item.selectedSize,
+            },
           },
           unit_amount: unitAmount as number,
         },

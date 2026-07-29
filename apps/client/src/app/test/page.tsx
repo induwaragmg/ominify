@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 
-const TestPage = async () => {
+const TestPage = async (): Promise<React.ReactNode> => {
     const { getToken } = await auth();
     const token = await getToken();
     console.log(token); 

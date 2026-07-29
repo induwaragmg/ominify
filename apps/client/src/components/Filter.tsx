@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ReactElement } from "react";
 
-const Filter = () => {
+const Filter : () => ReactElement = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();

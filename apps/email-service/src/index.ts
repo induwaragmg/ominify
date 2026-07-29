@@ -1,6 +1,6 @@
 import sendMail from "./utils/mailer";
 import { createConsumer, createKafkaClient } from "@repo/kafka";
-
+import { generateOrderEmailHtml } from "./utils/orderEmailTemplate";
 
 const kafka = createKafkaClient("email-service");
 const consumer = createConsumer(kafka, "email-service");
@@ -17,8 +17,8 @@ const start = async () => {
           if (email) {
             await sendMail({
               email,
-              subject: "Welcome to E-commerce App",
-              text: `Welcome ${username}. You account has been created!`,
+              subject: "Welcome to Ominify!",
+              text: `Welcome ${username}! Your Ominify account has been created successfully.`,
             });
           }
         },
@@ -26,37 +26,33 @@ const start = async () => {
       {
         topicName: "order.created",
         topicHandler: async (message) => {
-          const { email, amount, status } = message.value;
+          const { email, amount, status, orderId, products, createdAt } = message.value;
 
           if (email) {
+            const htmlContent = generateOrderEmailHtml({
+              orderId,
+              email,
+              amount,
+              status,
+              products,
+              createdAt,
+            });
+
             await sendMail({
               email,
-              subject: "Order has been created",
-              text: `Hello! Your order: Amount: ${amount/100}, Status: ${status}`,
+              subject: `Thank you for your order! (Order #${orderId ? orderId.substring(orderId.length - 7).toUpperCase() : "CONFIRMED"})`,
+              text: `Thank you for your order! Amount: $${(amount / 100).toFixed(2)}. Status: ${status}`,
+              html: htmlContent,
             });
-            console.log(`Email sent to ${email} for order created text ${amount/100} and status ${status}`);
+
+            console.log(`Order confirmation email sent to ${email} for order ${orderId || "new"}`);
           }
         },
       },
     ]);
   } catch (error) {
-    console.log(error);
+    console.error("Email service error:", error);
   }
 };
 
-start(); 
-
-
-// const start = async () => {
-//     try {
-//       await sendMail({
-//         email: "ravindu.induwara2002@gmail.com",
-//         subject: "Test Email",
-//         text: "This is a test email from the plutonium cooperation email service.",
-//       });
-//     } catch (error) {
-//       console.log(error);
-//     }
-// }
-
-// start();
+start();

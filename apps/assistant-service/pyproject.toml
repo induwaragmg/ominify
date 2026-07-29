@@ -1,0 +1,25 @@
+[project]
+name = "assistant-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.5",
+    "asyncpg>=0.31.0",
+    "clerk-backend-api>=6.0.1",
+    "fastapi>=0.140.7",
+    "google-genai>=2.14.0",
+    "httpx>=0.28.1",
+    "langgraph>=1.2.9",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pyjwt>=2.13.0",
+    "pytest>=9.1.1",
+    "python-dotenv>=1.2.2",
+    "uvicorn>=0.51.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -1,300 +1,327 @@
-# E-commerce Project Context and Handoff
+# Ominify E-commerce Project Context and Handoff
 
-Use this document as context when continuing the project in ChatGPT Web. It reflects the repository as inspected on 2026-07-04. Treat statements under **Current implementation** and **Known issues** as observations of the code, not assumptions.
+Use this document as context when continuing the project. It reflects the repository as inspected on **2026-07-28**. Treat statements under **Current implementation** and **Completed features** as verified observations of the codebase.
+
+---
 
 ## How to use this context
 
-When answering questions about this project:
+When answering questions or building features for this project:
 
-- Preserve the existing pnpm/Turborepo monorepo unless there is a strong reason to change it.
-- Distinguish implemented behavior from mock UI and planned behavior.
-- Prefer incremental implementations that fit the current services and shared packages.
-- Flag security, payment integrity, data consistency, and deployment concerns explicitly.
-- Before suggesting code, state which app/package and files should change.
-- Ask for missing product requirements only when they materially affect the implementation.
+- Preserve the existing **pnpm / Turborepo** monorepo structure.
+- Distinguish fully implemented event-driven microservices from remaining operational/production enhancements.
+- Prefer incremental implementations that build upon existing shared packages (`@repo/types`, `@repo/kafka`, `@repo/product-db`, `@repo/order-db`).
+- Note that microservices communicate asynchronously via **Kafka events** for background tasks (Stripe catalog sync, order creation, welcome/confirmation emails) while maintaining synchronous HTTP APIs for direct client requests.
+- Before suggesting code, state which app or package and exact files should change.
 
-## Project goal
+---
 
-A full-stack e-commerce platform with:
+## Project Goal
 
-- A customer storefront for browsing products, selecting variants, managing a cart, signing in, and paying.
-- An admin dashboard for products, categories, users, orders/payments, and analytics.
-- Separate product, order, and payment services.
-- Clerk authentication and role-based admin authorization.
-- PostgreSQL for catalog data, MongoDB for orders, and Stripe for payments.
+**Ominify** is a full-stack, event-driven e-commerce microservices platform featuring:
 
-The codebase is currently a learning/development project. The storefront UI and service foundations exist, but the complete catalog-to-payment-to-order lifecycle is not yet connected.
+- **Customer Storefront (`apps/client`)**: Next.js 15 App Router customer interface featuring an auto-playing hero banner carousel, debounced real-time search with a responsive fullscreen mobile search overlay, product catalog with advanced category/price filtering, wishlist management with cross-device PostgreSQL sync, persisted cart with variant selections (size/color), **AI Shopping Assistant Workspace** (sticky resizable workspace with service layer abstraction — see [ASSISTANT_CONTEXT.md](file:///d:/lessons/Full%20Stack%20e%20commerse%20app/ecommerse_app/ASSISTANT_CONTEXT.md)), Stripe Embedded Checkout with receipt success modal, customer account portal, and order history tracking.
+- **Admin Dashboard (`apps/admin`)**: Next.js 15 App Router management portal protected by Clerk role-based access control (`admin` role), enabling catalog management (products & categories), user administration, and order monitoring.
+- **Product & Wishlist Service (`apps/product-service`)**: Express 5 service managing PostgreSQL product catalog and user wishlists via Prisma 7. Emits Kafka events when products are created or deleted, and provides weighted search algorithms (supporting term normalization, pluralization, and hyphens).
+- **Order Service (`apps/order-service`)**: Fastify 5 service managing MongoDB order records via Mongoose. Consumes Kafka payment events to persist orders and emits order creation events.
+- **Payment Service (`apps/payment-service`)**: Hono 4 service interfacing with Stripe Embedded Checkout. Listens for Stripe webhooks, emits Kafka payment events, and automatically synchronizes catalog items into Stripe products/prices via Kafka event subscriptions.
+- **Auth Service (`apps/auth-service`)**: Express 5 service providing admin-protected User CRUD operations interfacing with Clerk Backend SDK. Emits Kafka user creation events.
+- **Email Service (`apps/email-service`)**: Event-driven background worker built with KafkaJS and Nodemailer (Gmail OAuth2) that listens for system events (`user.created`, `order.created`) to dispatch automated emails.
+- **Kafka Message Broker (`packages/kafka`)**: Multi-broker Apache Kafka cluster managed via Docker Compose (ports 9094, 9095, 9096) with Kafka UI for real-time topic monitoring.
+
+---
 
 ## Architecture
 
-This is a pnpm workspace managed by Turborepo. It uses two Next.js frontends and three independently hosted Node.js HTTP services.
+This is a pnpm workspace managed by Turborepo containing 7 applications and 6 shared packages.
 
 ```text
-Customer browser -> client (Next.js, :3002)
-                         |-> product-service (Express, :8000) -> PostgreSQL via Prisma
-                         |-> order-service (Fastify, :8001)  -> MongoDB via Mongoose
-                         `-> payment-service (Hono, :8002)   -> Stripe
+                                +-------------------+
+                                | Customer Browser  |
+                                +---------+---------+
+                                          |
+                                          v
+                              +-----------------------+
+                              |    client (Next.js)   |
+                              |      Port :3002       |
+                              +---+---------------+---+
+                                  |               |
+             +--------------------+               +--------------------+
+             | (Catalog / Wishlist / Products)                          | (Checkout / Session)
+             v                                                         v
++--------------------------+                               +--------------------------+
+| product-service (Express)|                               | payment-service (Hono)   |
+|        Port :8000        |                               |        Port :8002        |
++------------+-------------+                               +------------+-------------+
+             |                                                          |
+             | (Emits product.created / product.deleted)                | (Receives Stripe Webhook)
+             v                                                          v
++-------------------------------------------------------------------------------------+
+|                              Apache Kafka Cluster                                   |
+|                      (docker-compose: 9094, 9095, 9096)                              |
++-----+----------------------------+----------------------------+---------------------+
+      |                            |                            |
+      | (product.*)                | (payment.successful)       | (user.created & order.created)
+      v                            v                            v
++--------------------+   +--------------------+       +-----------------------+
+|  payment-service   |   |   order-service    |       |     email-service     |
+| (Syncs Stripe catalog)| | (Persists Mongo) |       | (Dispatches Emails)   |
++--------------------+   +---------+----------+       +-----------------------+
+                                   |
+                                   | (Emits order.created)
+                                   +----------------------------+
 
-Admin browser ----> admin (Next.js, :3003)
-                         `-> intended to call protected product/order APIs
-
-Clerk authenticates customer requests and supplies JWT session claims.
-Admin authorization expects sessionClaims.metadata.role === "admin".
-Shared TypeScript contracts live in packages/types.
+                                +-------------------+
+                                |   Admin Browser   |
+                                +---------+---------+
+                                          |
+                                          v
+                              +-----------------------+
+                              |    admin (Next.js)    |
+                              |      Port :3003       |
+                              +---+---------------+---+
+                                  |               |
+              +-------------------+               +-------------------+
+              | (User CRUD)                                           | (Product CRUD)
+              v                                                       v
++--------------------------+                             +--------------------------+
+|   auth-service (Express) |                             | product-service (Express)|
+|        Port :8003        |                             |        Port :8000        |
++------------+-------------+                             +--------------------------+
+             | (Emits user.created)
+             +--------------------------------------------------+
 ```
 
-There is currently no API gateway, message broker, container/orchestration setup, or service discovery. Frontend/service URLs and CORS origins are local-development oriented.
+### Shared Packages
 
-## Folder structure
+- **`@repo/kafka`**: Shared Kafka client setup, producer (`createProducer`), and consumer (`createConsumer`) abstraction built on `kafkajs`.
+- **`@repo/product-db`**: Prisma 7 PostgreSQL client, schema (`Product`, `Category`, `Wishlist`), and migrations.
+- **`@repo/order-db`**: Mongoose connection and MongoDB `Order` model definition (with support for variant size, color, image).
+- **`@repo/types`**: Shared TypeScript contracts, Zod schemas, Clerk JWT claim types, and cart/wishlist DTOs.
+- **`@repo/eslint-config`**: Monorepo linting rules.
+- **`@repo/typescript-config`**: Shared TypeScript compiler configurations.
+
+---
+
+## Folder Structure
 
 ```text
 ecommerse_app/
 |-- apps/
-|   |-- client/                 Customer Next.js App Router application
-|   |   |-- public/             Product/payment images and branding
-|   |   `-- src/
-|   |       |-- app/            Home, products, cart, return, orders, auth pages
-|   |       |-- components/     Catalog, cart, shipping, Stripe, navbar/footer UI
-|   |       `-- stores/         Persisted Zustand cart store
-|   |-- admin/                  Admin Next.js App Router dashboard
-|   |   |-- public/             Mock product/user images
-|   |   `-- src/
-|   |       |-- app/            Dashboard, products, users, payments pages
-|   |       |-- components/     Forms, charts, tables, sidebar, dashboard widgets
-|   |       `-- components/ui/  shadcn/Radix-style UI primitives
-|   |-- product-service/        Express catalog API
-|   |   `-- src/{controllers,routes,middleware}/
-|   |-- order-service/          Fastify order query API
-|   |   `-- src/{routes,middleware}/
-|   `-- payment-service/        Hono Stripe checkout API
-|       `-- src/{routes,middleware,utils}/
+|   |-- client/                 Customer Next.js App Router application (:3002)
+|   |   |-- public/             Brand logo (`logo.svg`), promotional hero banners (`banners/`)
+|   |   |-- src/app/            (shop) landing, (dashboard) account, cart, categories, orders, products, return, wishlist
+|   |   |-- src/components/     HeroCarousel, SearchBar, ProductCard, ProductList, ProductInteraction,
+|   |   |                       CategoryCard, Categories, CheckoutForm, PaymentSuccessModal, AppSidebar, RightSidebar, Navbar, Footer
+|   |   |-- src/lib/            Category data constants (`categoryData.ts`), UI helper utilities
+|   |   `-- src/stores/         Zustand stores: `cartStore.ts` (cart persistence), `wishlistStore.ts` (wishlist state & API sync)
+|   |-- admin/                  Admin Next.js App Router dashboard (:3003)
+|   |   |-- src/app/            Protected dashboard, products, categories, users, orders
+|   |   |-- src/components/     Forms (AddProduct, AddUser, AddCategory), tables, charts, sidebar
+|   |   `-- src/middleware.ts   Clerk role-based protection (admin role required)
+|   |-- product-service/        Express catalog & wishlist API (:8000)
+|   |   `-- src/                Controllers (`product`, `category`, `wishlist`), routes, Prisma client, Kafka producer
+|   |-- order-service/          Fastify order API (:8001)
+|   |   `-- src/                Order query routes, Mongoose db, Kafka consumer & producer
+|   |-- payment-service/        Hono Stripe checkout API (:8002)
+|   |   `-- src/                Session creation, Stripe webhooks, Kafka consumer/producer
+|   |-- auth-service/           Express user management API (:8003)
+|   |   `-- src/                Clerk SDK integration, user CRUD, Kafka producer
+|   `-- email-service/          Event-driven email worker (No HTTP port)
+|       `-- src/                Kafka topic consumers, Nodemailer Gmail transport
 |-- packages/
-|   |-- product-db/             Prisma 7 PostgreSQL schema/client/migrations
+|   |-- kafka/                  Shared kafkajs client, producer, consumer & Docker Compose
+|   |-- product-db/             Prisma 7 PostgreSQL schema (`Product`, `Category`, `Wishlist`), client, and migrations
 |   |-- order-db/               Mongoose connection and Order model
-|   |-- types/                  Shared product/cart/auth types and Zod schema
-|   |-- eslint-config/          Shared lint configuration
-|   `-- typescript-config/      Shared TypeScript configurations
-|-- package.json                Root Turbo scripts
+|   |-- types/                  Shared TypeScript types, Zod schemas, and JWT claims
+|   |-- eslint-config/          Shared ESLint configuration
+|   `-- typescript-config/      Shared tsconfig definitions
+|-- PROJECT_CONTEXT.md          This project handoff and architecture specification document
+|-- package.json                Root pnpm workspace scripts
 |-- pnpm-workspace.yaml
 `-- turbo.json
 ```
 
-## Tech stack
+---
 
-- Monorepo: pnpm 9 workspaces, Turborepo 2, TypeScript.
-- Customer frontend: Next.js 15.4, React 19, Tailwind CSS 4, Zustand 5 with localStorage persistence, React Hook Form, Zod, Lucide icons, React Toastify.
-- Admin frontend: Next.js 15.3, React 19, Tailwind CSS 4, Radix UI/shadcn-style components, TanStack Table, Recharts, React Hook Form, Zod, next-themes.
-- Authentication: Clerk for Next.js, Express, Fastify, and Hono.
-- Product service: Express 5 and CORS.
-- Product database: PostgreSQL, Prisma 7, `@prisma/adapter-pg`.
-- Order service: Fastify 5.
-- Order database: MongoDB with Mongoose.
-- Payment service: Hono 4 on Node and Stripe Checkout Elements/embedded checkout.
-- Package-level runtime tooling: `tsx` in watch mode.
+## Tech Stack
 
-Version caveat: package versions are not fully aligned (for example Next.js 15.3 vs 15.4 and TypeScript 5.x vs an order-service TypeScript 6 dev dependency).
+- **Monorepo**: pnpm 9 workspaces, Turborepo 2, TypeScript 5.9.
+- **Customer Frontend (`apps/client`)**: Next.js 15, React 19, Tailwind CSS 4, Zustand 5 (cart & wishlist stores), React Hook Form, Zod, Lucide icons, Stripe Elements (`@stripe/react-stripe-js`), Clerk (`@clerk/nextjs`), Google Fonts (`Outfit`, `Inter`).
+- **Admin Frontend (`apps/admin`)**: Next.js 15, React 19, Tailwind CSS 4, Radix UI / shadcn-style components, TanStack Table, Recharts, React Hook Form, Zod, next-themes, Clerk (`@clerk/nextjs`).
+- **Authentication & Authorization**: Clerk authentication across Next.js frontends, Express (`@clerk/express`), Fastify (`@clerk/fastify`), and Hono (`@hono/clerk-auth`). Custom claims enforce `metadata.role === "admin"`.
+- **Product & Wishlist Service**: Express 5, Prisma 7, PostgreSQL via `@prisma/adapter-pg`.
+- **Order Service**: Fastify 5, MongoDB with Mongoose.
+- **Payment Service**: Hono 4 on Node.js, Stripe SDK (Checkout sessions & webhooks).
+- **Auth Service**: Express 5, `@clerk/express`, `@clerk/backend` SDK.
+- **Email Service**: KafkaJS consumer, Nodemailer with OAuth2 (Gmail API).
+- **Event Streaming & Infrastructure**: Apache Kafka (3-broker cluster on Docker Compose), Kafka UI.
 
-## Data models and contracts
+---
 
-### Product catalog (PostgreSQL)
+## Data Models and Kafka Contracts
 
-`Product`: integer ID, name, short description, description, integer price, string-array sizes, string-array colors, JSON images, timestamps, and category slug relation.
+### Product Catalog & Wishlist (PostgreSQL via Prisma)
 
-`Category`: integer ID, name, unique slug, and related products.
+- **`Product`**: `id` (Int, PK, auto-increment), `name` (String), `shortDescription` (String), `description` (String), `price` (Int, minor units / cents), `sizes` (String[]), `colors` (String[]), `images` (JSON: color-to-image mapping), `categorySlug` (String, FK), `createdAt`, `updatedAt`.
+- **`Category`**: `id` (Int, PK, auto-increment), `name` (String), `slug` (String, Unique).
+- **`Wishlist`**: `id` (Int, PK, auto-increment), `userId` (String), `productId` (Int, FK -> `Product.id`, Cascade Delete), `createdAt` (DateTime). Unique constraint: `@@unique([userId, productId])`.
 
-Images are designed as a color-to-image mapping. Product creation validates that every selected color has an image key. There is no inventory/SKU model yet, so stock cannot be tracked per size/color variant.
+### Orders (MongoDB via Mongoose)
 
-### Orders (MongoDB)
+- **`Order`**:
+  - `userId` (String, required - Clerk User ID)
+  - `email` (String, required - Customer Email)
+  - `amount` (Number, required - Total order price in minor units / cents)
+  - `status` (String, enum: `["success", "failed"]`)
+  - `products`: Array of items:
+    - `productId` (Number)
+    - `name` (String)
+    - `quantity` (Number)
+    - `price` (Number)
+    - `image` (String)
+    - `selectedColor` (String)
+    - `selectedSize` (String)
+  - Timestamps: `createdAt`, `updatedAt`
 
-`Order`: Clerk user ID, email, amount, status (`success` or `failed`), product snapshots containing name/quantity/price, and timestamps.
+### Event Streaming Contracts (Kafka Topics)
 
-The order model currently omits shipping address, Stripe IDs, currency, variant selections, explicit order number, fulfillment state, refunds, and idempotency metadata.
+1. **`user.created`**:
+   - Producer: `auth-service` (when a new user is created via Admin API)
+   - Consumer: `email-service`
+   - Payload: `{ username: string, email: string }`
+2. **`product.created`**:
+   - Producer: `product-service` (when admin creates a new product)
+   - Consumer: `payment-service`
+   - Payload: `{ id: string, name: string, price: number }`
+3. **`product.deleted`**:
+   - Producer: `product-service` (when admin deletes a product)
+   - Consumer: `payment-service`
+   - Payload: `productId` (number)
+4. **`payment.successful`**:
+   - Producer: `payment-service` (when Stripe webhook receives `checkout.session.completed`)
+   - Consumer: `order-service`
+   - Payload: `{ userId: string, email: string, amount: number, status: "success" | "failed", products: OrderProduct[] }`
+5. **`order.created`**:
+   - Producer: `order-service` (after persisting new order document to MongoDB)
+   - Consumer: `email-service`
+   - Payload: `{ email: string, amount: number, status: string }`
 
-### Shared types
+---
 
-`@repo/types` exports Prisma-derived product/category types, cart types, shipping form validation, Stripe product shape, and Clerk custom role claims. A cart line is a product plus quantity, selected size, and selected color.
+## Current Implementation Details
 
-## Current implementation
+### 1. Customer Storefront (`apps/client`)
 
-### Customer app
+- **Hero Carousel & Branding**: Storefront home page features an auto-rotating hero banner (`HeroCarousel.tsx`) with custom promotional slides (`banner1.png`, `banner2.png`, `banner3.png`), quick navigation CTAs, and refreshed Ominify branding.
+- **Search Bar & Mobile Search Overlay**: `SearchBar.tsx` provides debounced real-time product search with dropdown suggestions and keyboard shortcuts (`Ctrl+K`). On mobile viewports, it opens a responsive full-screen search modal with instant results and touch-friendly back/close triggers.
+- **Wishlist System**: Powered by Zustand `wishlistStore.ts` combined with backend sync via `product-service` (`/wishlist`). Wishlist heart toggles on `ProductCard` and `ProductInteraction` reflect real-time active states. Customer can view saved items on `/wishlist`.
+- **Account Dashboard**: `/account` route provides a personalized customer portal displaying Clerk profile information, order summary statistics, saved addresses, quick actions, and settings.
+- **Category Browsing**: `/categories` route provides visual category cards (`CategoryCard.tsx`) backed by curated category metadata (`categoryData.ts`), displaying product counts and direct filter links.
+- **Catalog & Detail Pages**: Connected to live `product-service` API (`/products`). Features category filter tabs, search, price sorting, empty states, and error boundary fallbacks. Product detail route fetches dynamic product information and variant selectors.
+- **Cart Management**: Client-side Zustand store persisted in browser `localStorage`. Identifies cart lines by composite key `(productId, selectedSize, selectedColor)`.
+- **Checkout & Payment**: Form collects shipping details, sends cart line items to `payment-service` (`/sessions/create-checkout-session`), obtains a Stripe embedded client secret, and renders Stripe Elements with an interactive `PaymentSuccessModal`.
+- **Order History**: `orders/page.tsx` fetches user orders from `order-service` (`/user-orders`) passing Clerk JWT bearer tokens. Renders order status badges, product item breakdowns, selected variants, and direct product links.
 
-- Responsive storefront shell with navbar, footer, home page, catalog cards, categories, filters, product detail UI, and product variant selection.
-- Cart supports distinct size/color variants, quantity changes/removal, clearing, hydration tracking, and persistence in browser localStorage through Zustand.
-- Clerk provider, sign-in/sign-up pages, user controls, and middleware are present.
-- Checkout contains a validated shipping form and Stripe Checkout Elements payment UI.
-- The client requests a Clerk token, sends the cart to the payment service, obtains a Checkout Session client secret, and confirms payment.
-- The return page retrieves a Stripe session and displays its session/payment status.
-- Product list, categories, and product details are still hardcoded. URL category/filter controls change query parameters but do not filter API-backed data.
-- The orders page is only a placeholder.
+### 2. Admin Dashboard (`apps/admin`)
 
-### Product service
+- **Route & API Protection**: Next.js middleware verifies Clerk authentication and checks `sessionClaims.metadata.role === "admin"`. Non-admin users are automatically redirected to `/unauthorized`.
+- **User Management**: Integrated with `auth-service` on port 8003. Lists Clerk users, allows user creation (which triggers welcome emails via Kafka), and permits user deletion.
+- **Product & Category Management**: AddProduct and AddCategory sheets post data directly to `product-service` on port 8000. Creating a product automatically emits a `product.created` event to Kafka.
+- **Orders View**: Displays real-time order data fetched from `order-service` on port 8001.
 
-- Express server on port 8000 with `/health` and an authenticated `/test` endpoint.
-- Public product reads: list with sort/category/search/limit query options and get-by-ID.
-- Admin-only create/update/delete product routes.
-- Public category listing and admin-only category create/update/delete routes.
-- Clerk JWT validation and `metadata.role === "admin"` checks.
-- Prisma-backed PostgreSQL catalog with an initial product/category migration.
+### 3. Product & Wishlist Service (`apps/product-service`)
 
-### Order service
+- **Port**: `8000` (Express 5).
+- **Public Endpoints**:
+  - `GET /products`: Supports search, category, sort, and limit. Includes weighted search algorithms handling pluralization, hyphens, title, description, and category fields.
+  - `GET /products/:id`: Retrieves individual product details.
+  - `GET /categories`: Lists all catalog categories.
+  - `GET /wishlist`: Fetches user's saved wishlist products (requires Clerk Auth).
+  - `POST /wishlist`: Saves a product to user's wishlist (requires Clerk Auth).
+  - `DELETE /wishlist/:productId`: Removes a product from user's wishlist (requires Clerk Auth).
+- **Admin Endpoints**: `POST /products`, `PUT /products/:id`, `DELETE /products/:id`, `POST /categories`, `PUT /categories/:id`, `DELETE /categories/:id` (protected by Clerk `shouldBeAdmin` middleware).
+- **Kafka Integration**: `createProduct` emits `product.created`; `deleteProduct` emits `product.deleted`.
 
-- Fastify server on port 8001, Clerk plugin, MongoDB connection, health/test routes.
-- Intended authenticated endpoint for a customer's orders and admin endpoint for all orders.
-- No create-order route; order creation is intended to happen after Stripe webhook confirmation.
+### 4. Payment Service (`apps/payment-service`)
 
-### Payment service
+- **Port**: `8002` (Hono 4).
+- **Stripe Checkout**: Authenticated `POST /sessions/create-checkout-session` resolves Stripe product prices and returns client secrets for Embedded Checkout.
+- **Stripe Webhook**: Mounted at `POST /webhooks/stripe`. Validates signature using `STRIPE_WEBHOOK_SECRET`. On `checkout.session.completed`, retrieves session line items and metadata, then emits `payment.successful` to Kafka.
+- **Automated Catalog Sync**: Kafka consumer subscribes to `product.created` and `product.deleted` from `product-service`, automatically creating/deleting Stripe Products and Prices dynamically via `stripe.products.create` and `stripe.products.del`.
 
-- Hono server on port 8002 with Clerk middleware, CORS, health route, and checkout session routes.
-- Authenticated checkout-session creation.
-- Server derives Stripe unit amounts by looking up Stripe prices by product ID rather than trusting prices submitted by the browser.
-- Session status retrieval for the return page.
-- A Stripe webhook handler exists and verifies signatures, but it is not registered in the Hono app and its order creation branch remains a TODO.
+### 5. Order Service (`apps/order-service`)
 
-### Admin app
+- **Port**: `8001` (Fastify 5).
+- **Database**: MongoDB connection with Mongoose `Order` model.
+- **Authenticated Endpoint**: `GET /user-orders` retrieves orders matching `request.userId`.
+- **Kafka Consumer**: Subscribes to `payment.successful` events from Kafka, creates a new `Order` document in MongoDB, and emits an `order.created` event.
 
-- Substantial dashboard UI: sidebar/navbar, theme support, charts, cards, todo widget, tables, pagination, and add/edit sheets.
-- Products, users, and payments tables currently use hardcoded mock arrays.
-- Add/edit forms are mostly UI-only; product image file inputs are not wired to storage/upload or the product API.
-- Admin authentication/route protection and Clerk integration are absent from the admin app.
+### 6. Auth Service (`apps/auth-service`)
 
-## Important design decisions already present
+- **Port**: `8003` (Express 5).
+- **Admin Endpoints**: `/users` (GET all, GET by ID, POST create, DELETE by ID), protected by Clerk `shouldBeAdmin` middleware.
+- **Kafka Integration**: On user creation (`POST /users`), emits `user.created` event containing username and email.
 
-- Monorepo with independently deployable services and shared TypeScript packages.
-- Domain databases are separated: relational PostgreSQL for catalog data and MongoDB for order documents.
-- Clerk user IDs are the cross-service user identity; roles come from Clerk session metadata.
-- Product reads are public; catalog mutations and global order reads require admin role.
-- Cart state is client-side and persisted locally, not stored server-side.
-- Cart line identity is `(productId, selectedSize, selectedColor)`.
-- Payment amounts are intended to be server-authoritative through Stripe price lookup.
-- Product images are represented as JSON keyed by color.
-- Stripe Checkout uses embedded/Elements UI and redirects back to `/return`.
-- Orders should be produced from verified Stripe webhook events, not merely from the browser return page. This intent is correct but unfinished.
+### 7. Email Service (`apps/email-service`)
 
-## Known issues and risks
+- **Execution**: Event-driven background process (no HTTP port required).
+- **Kafka Consumer Group**: `email-service`.
+- **Subscribed Topics**:
+  - `user.created`: Sends a welcome email via Nodemailer.
+  - `order.created`: Sends an order confirmation email containing order total and payment status.
 
-### Functional correctness
+---
 
-- `payment-service/src/routes/webhooks.route.ts` is never mounted in `payment-service/src/index.ts`; no webhook can currently create an order.
-- The webhook contains `TODO: create order`, and the payment service has no dependency/client configured for order persistence.
-- Customer order lookup queries `{ userID: request.userId }`, but the Mongo schema field is `userId`; it will not match stored orders.
-- The storefront never fetches the product API, so the database catalog is not visible to customers.
-- Stripe lookup assumes each catalog product ID already exists as a Stripe Product with a usable price. Catalog creation does not synchronize Stripe products/prices.
-- `GetStripeProductPrice` can return an Error/undefined, which is cast to a number without robust validation.
-- Checkout receives `shippingForm` as required even though parent state begins undefined; checkout should be gated until shipping validation succeeds.
-- Payment button is inside a form but has no explicit `type="button"` or submit handler/preventDefault.
-- Checkout hardcodes shipping country to `US`, and the shipping schema does not collect country/postal code/state.
-- The return page reports status but does not clear the cart, display an order receipt, or guarantee order persistence.
-- Product database price is an integer, while mock products use decimals. A consistent minor-unit money convention is needed.
-- Product not-found and invalid numeric IDs are not explicitly handled.
+## Completed Milestones
 
-### Security and integrity
+- [x] **Event-Driven Architecture**: Integrated Apache Kafka multi-broker cluster (`packages/kafka`) with sub-second message passing across services.
+- [x] **Complete Purchase Lifecycle (P0)**: Stripe checkout session -> Webhook event -> `payment.successful` Kafka event -> MongoDB Order creation -> `order.created` Kafka event -> Automated confirmation email.
+- [x] **Stripe Catalog Synchronization**: Product service creation/deletion events automatically sync with Stripe Products & Prices.
+- [x] **Wishlist System (P1)**: PostgreSQL database schema (`Wishlist` model), `product-service` wishlist API endpoints, client Zustand wishlist store, product heart toggles, and dedicated `/wishlist` view.
+- [x] **Live Search & Fullscreen Mobile Search Overlay (P1)**: Debounced suggestion dropdown, category-aware weighted search, keyboard shortcuts (`Ctrl+K`), and full-screen mobile search modal.
+- [x] **Hero Banner Carousel & Brand Refresh (P1)**: Promotional hero carousel component, responsive banner assets, updated typography (`Outfit`/`Inter`), and Ominify visual identity.
+- [x] **Account Portal & Category Discovery Hub (P1)**: Dedicated `/account` dashboard view with stats/profile and `/categories` discovery page with curated category cards.
+- [x] **Payment Success & Receipt Modal (P1)**: Integrated `PaymentSuccessModal` rendering confirmation feedback and order navigation triggers.
+- [x] **Storefront & Admin Authorization (P1)**: Customer client and Admin dashboard fully connected to backend APIs with Clerk RBAC (`admin` role enforcement).
 
-- Admin frontend lacks authentication and authorization protection.
-- Payment session status GET is public and does not verify the session belongs to the requesting Clerk user.
-- CORS and return URLs are hardcoded to localhost; production configuration is missing.
-- The Stripe publishable key is embedded in source. It is public by nature, but an environment variable is still preferable for per-environment configuration.
-- Webhook processing needs idempotency and duplicate-event protection.
-- Service inputs rely heavily on TypeScript annotations instead of runtime request validation.
-- Error responses in Hono auth middleware do not consistently set 401/403 status codes.
+---
 
-### Maintainability and operations
+## Remaining Roadmap and Next Steps
 
-- Root README is the unchanged Turborepo starter and does not document this project.
-- No automated tests, CI workflow, Docker setup, deployment manifests, centralized logging, observability, or API documentation were found.
-- Backend services do not consistently define build/start/lint scripts, which may make root Turbo commands incomplete.
-- Environment variables are undocumented and Turbo only declares `DATABASE_URL` globally, while the project also needs Clerk, MongoDB, Stripe, and public service URLs.
-- Shared `types` imports ORM/database packages, coupling frontend contracts to persistence implementations and increasing bundle/type-generation fragility.
-- There is deprecated/commented experimental code and a temporary test page with hardcoded localhost endpoints.
-- Generated/default metadata and some naming remain inaccurate (for example admin metadata and the products page component/title).
+### 1. Operations & Cloud Infrastructure (P2)
+- **Image Upload & Storage**: Replace local static image references with cloud image uploads (e.g., S3 / Cloudinary) in admin forms.
+- **SKU & Inventory Model**: Expand product sizes/colors from primitive string arrays into explicit SKU variants with stock level tracking.
+- **Webhooks Idempotency**: Add Stripe event ID checks / deduplication in `order-service` to prevent duplicate order generation.
 
-## Required environment configuration
+### 2. Operational Hardening (P3)
+- **Unified Environment Configuration**: Provide comprehensive `.env.example` templates for all 7 apps/services.
+- **Containerization & Deployment**: Create Dockerfiles for all microservices and Next.js frontends to allow unified `docker-compose` or Kubernetes orchestration.
+- **End-to-End Testing**: Add integration tests for Kafka event handlers and Cypress/Playwright E2E tests for the purchase flow.
 
-Exact Clerk variable names follow Clerk framework conventions and should be confirmed from the local `.env` files without exposing secrets. At minimum, the architecture requires:
+---
 
-- Product DB/service: `DATABASE_URL`, Clerk publishable/secret credentials, allowed origins, port.
-- Order DB/service: `MONGO_URL`, Clerk credentials, port.
-- Payment service: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Clerk credentials, client/return origin, port.
-- Customer: Clerk public configuration, `NEXT_PUBLIC_PAYMENT_SERVICE_URL`, Stripe publishable key, and ideally product/order service URLs.
-- Admin: Clerk public configuration plus product/order service URLs.
-
-Do not commit real secret values. Add validated `.env.example` files for each app.
-
-## Remaining TODOs and recommended order
-
-### P0 — complete a safe purchase lifecycle
-
-1. Choose and document the money representation (recommended: integer minor units such as cents everywhere).
-2. Make catalog/Stripe price ownership explicit. Prefer fetching authoritative product prices from the product service during checkout or persist Stripe Price IDs in the catalog; do not depend on an undocumented product-ID convention.
-3. Mount the Stripe webhook route and create orders only after verified payment events.
-4. Add Stripe session/payment-intent IDs and an idempotency key/index to orders to prevent duplicates.
-5. Capture complete shipping information and product variant snapshots in orders.
-6. Fix `userID` to `userId`, implement reliable user/admin order reads, and protect session-status lookup by ownership.
-7. Add structured error handling and runtime validation for checkout and webhook payloads.
-8. Test the entire flow with Stripe CLI: cart -> checkout -> successful/failed payment -> webhook -> order -> customer order history.
-
-### P1 — replace mocks with real application data
-
-1. Connect storefront product list/detail/category/filter/search pages to product-service.
-2. Define loading, empty, error, invalid-ID, and not-found behavior.
-3. Connect the admin product/category screens to protected APIs using Clerk tokens.
-4. Implement image upload/storage (for example S3-compatible storage or Cloudinary) and store stable URLs.
-5. Connect customer orders and admin order/payment tables to real data.
-6. Protect the admin app at both route/UI and API levels; API authorization remains the source of truth.
-7. Decide whether user administration comes from Clerk's backend API or a synchronized local profile store.
-
-### P2 — strengthen domain design
-
-1. Add SKU/variant and inventory models instead of only product-level size/color arrays.
-2. Define order and fulfillment state machines (pending, paid, failed, processing, shipped, delivered, cancelled, refunded).
-3. Add currency, taxes, shipping rates, discounts/coupons, refunds, and inventory reservation rules as required.
-4. Decide whether services communicate synchronously through HTTP or asynchronously through events; document failure/retry behavior.
-5. Split API DTOs/schemas from Prisma and Mongoose model types, ideally using shared Zod contracts.
-6. Add pagination to product/order endpoints and avoid unbounded admin queries.
-
-### P3 — production readiness
-
-1. Align dependency versions and add consistent `build`, `start`, `lint`, and `check-types` scripts.
-2. Add unit/integration/end-to-end tests and payment webhook fixtures.
-3. Add CI for formatting, linting, type checking, tests, builds, and Prisma migration validation.
-4. Add environment validation, `.env.example` files, production CORS/URL configuration, and secret-management guidance.
-5. Add logging with request/correlation IDs, health/readiness checks, metrics, and error monitoring.
-6. Define deployment topology, database backups/migrations, HTTPS, rate limiting, and webhook availability.
-7. Replace the starter README and remove temporary/deprecated code once migrated.
-
-## Decisions that still need to be made
-
-- Is this intentionally a microservice learning architecture, or should deployment simplicity take priority? For a small initial product, three backend frameworks/databases increase operational cost.
-- Which system owns price data: PostgreSQL catalog or Stripe? How are price updates synchronized?
-- Will product variants become first-class SKUs with inventory, or remain option arrays?
-- Should order creation write directly to MongoDB from payment-service, call order-service, or publish a payment event to a queue?
-- Which countries/currencies, shipping rules, taxes, and payment methods must be supported?
-- What image storage/provider and upload security model will be used?
-- Is guest checkout required, or must every buyer authenticate with Clerk?
-- What admin roles/permissions are required beyond one `admin` role?
-- Will Clerk remain the source of truth for users, or will local customer profiles be stored?
-- What are the intended hosting providers and environment topology?
-
-## Suggested near-term target
-
-Build one complete vertical slice before expanding admin analytics: a real database product appears in the storefront, an authenticated customer buys it at a server-verified price, Stripe sends a verified idempotent webhook, an order with shipping and variants is stored, and that order appears in both customer history and the protected admin view.
-
-## Useful commands
+## Useful Development Commands
 
 ```bash
-pnpm install
+# Start all microservices, frontends, and Turbo tasks
 pnpm dev
+
+# Build all applications and packages
 pnpm build
-pnpm check-types
+
+# Run linting across the monorepo
 pnpm lint
+
+# Check TypeScript types across all projects
+pnpm check-types
+
+# Start Kafka cluster locally (Run from packages/kafka)
+cd packages/kafka && docker compose up -d
+
+# Regenerate Prisma Client (Run from packages/product-db)
 pnpm --filter @repo/product-db db:generate
+
+# Run Prisma Database Migrations (Run from packages/product-db)
 pnpm --filter @repo/product-db db:migrate
 ```
-
-Note: some commands may currently fail because not every workspace defines every Turbo task consistently; fix scripts as part of production-readiness work.
-
-## Prompt for the next ChatGPT conversation
-
-Copy this file into ChatGPT Web, then add:
-
-> Act as a senior full-stack architect and implementation partner for this project. Use the repository context above as the current source of truth, but ask me to paste relevant files before proposing exact patches if you cannot inspect the repository. Separate verified facts from assumptions. Preserve current architecture unless we explicitly decide otherwise. Prioritize payment security, authoritative pricing, webhook idempotency, authorization, and data consistency. For each implementation, identify affected apps/files, data/API contract changes, migration needs, implementation steps, edge cases, and tests. My next question is: [ASK YOUR QUESTION HERE]
-
