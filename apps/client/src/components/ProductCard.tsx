@@ -156,7 +156,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
     //     </div>
     //   </div>
     // </div>
-   
+
     <div className="group relative aspect-7/9 max-w-[288px] overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl">
       <Link
         href={`/products/${product.id}`}
@@ -191,9 +191,8 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart
-            className={`h-4 w-4 ${
-              isWishlisted ? "fill-white text-white" : ""
-            }`}
+            className={`h-4 w-4 ${isWishlisted ? "fill-white text-white" : ""
+              }`}
           />
         </button>
       </div>
@@ -212,7 +211,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           {product.shortDescription}
         </p>
         <div className="flex items-center justify-between  gap-4 text-xs">
-         {/* SIZES */}
+          {/* SIZES */}
           <div className="flex flex-col gap-1">
             <span className="text-gray-50">Size</span>
             <select
@@ -237,11 +236,10 @@ const ProductCard = ({ product }: { product: ProductType }) => {
             <div className="flex items-center gap-2">
               {product.colors.map((color) => (
                 <div
-                  className={`cursor-pointer border ${
-                    productTypes.color === color
+                  className={`cursor-pointer border ${productTypes.color === color
                       ? "ring-1 ring-white border-0"
                       : "ring-1 ring-white/30 border-0"
-                  } rounded-full p-[1.2px]`}
+                    } rounded-full p-[1.2px]`}
                   key={color}
                   onClick={() =>
                     handleProductType({ type: "color", value: color })
@@ -255,21 +253,21 @@ const ProductCard = ({ product }: { product: ProductType }) => {
               ))}
             </div>
           </div>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            handleAddToCart();
-          }}
-          className="hover:cursor-pointer mt-2 flex px-5 items-center justify-center rounded-full bg-white py-2.5 font-semibold text-black transition hover:bg-gray-100"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <Plus className="h-5 w-5" />
-        </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleAddToCart();
+            }}
+            className="hover:cursor-pointer mt-2 flex px-5 items-center justify-center rounded-full bg-white py-2.5 font-semibold text-black transition hover:bg-gray-100"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
+          </button>
         </div>
 
       </div>
     </div>
- 
+
   );
 };
 

@@ -3,7 +3,8 @@
 import useWorkspaceUIStore from "@/stores/workspaceUIStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import RightSidebar from "../RightSidebar";
 import AssistantPanel from "./AssistantPanel";
 
@@ -57,6 +58,22 @@ export default function Workspace(): React.ReactNode {
 
   const [isResizing, setIsResizing] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
+
+  const pathname = usePathname();
+  const prevPathnameRef = useRef<string | null>(null);
+
+  // ── Auto Collapse/Open on Route Navigation ────────────────────────────────
+  useEffect(() => {
+    // Only execute when user actively navigates between different routes
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname;
+      if (pathname === "/") {
+        useWorkspaceUIStore.getState().openAssistant();
+      } else {
+        useWorkspaceUIStore.getState().closeAssistant();
+      }
+    }
+  }, [pathname]);
 
   // ── Resize Logic ─────────────────────────────────────────────────────────
 
@@ -122,7 +139,7 @@ export default function Workspace(): React.ReactNode {
           isResizing={isResizing}
         />
 
-        <div className="flex h-[calc(100vh-26px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+        <div className="flex h-[calc(100vh-32px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
           {/* Header with close */}
           <div className="flex shrink-0 items-center justify-between border-b border-gray-50 px-4 py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -169,7 +186,7 @@ export default function Workspace(): React.ReactNode {
             >
               {/* Mobile header */}
               <div className="flex shrink-0 items-center justify-between border-b border-gray-50 px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <span className="text-xs font-semibold tracking-wider text-gray-400">
                   Ominify Assistant
                 </span>
                 <button

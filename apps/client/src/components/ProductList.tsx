@@ -155,13 +155,13 @@ const fetchData = async ({
     `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products?${category ? `category=${category}` : ""}${search ? `&search=${search}` : ""}&sort=${sort || "newest"}${params === "homepage" ? "&limit=8" : ""}`,
   );
   const data: ProductType[] = await res.json();
-  
+
   if (!res.ok) {
-  throw new Error(`Failed to fetch products: ${res.status}`);
-}
+    throw new Error(`Failed to fetch products: ${res.status}`);
+  }
   if (!Array.isArray(data)) {
-      throw new Error("Invalid response format");
-    }
+    throw new Error("Invalid response format");
+  }
 
   return data;
 };
@@ -228,8 +228,13 @@ const ProductList = async ({
               gap-4
               grid-cols-[repeat(auto-fill,minmax(250px,288px))]
             "
-          > 
-          {products.map((product) => (
+          // className="
+          //   grid
+          //   gap-4
+          //   grid-cols-[repeat(auto-fill,minmax(250px,288px))]
+          // "
+          >
+            {products.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -250,32 +255,32 @@ const ProductList = async ({
 
     // CHANGE: Display an error UI when fetching fails.
     return (
-    <div className="w-full">
-      {/* CHANGE: Keep the same layout as the success state */}
-      <Categories />
-      {params === "products" && <Filter />}
+      <div className="w-full">
+        {/* CHANGE: Keep the same layout as the success state */}
+        <Categories />
+        {params === "products" && <Filter />}
 
-      {/* CHANGE: Give the content area a minimum height */}
-      <div className="min-h-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700">
-            Failed to load products!
-          </h2>
+        {/* CHANGE: Give the content area a minimum height */}
+        <div className="min-h-100 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-700">
+              Failed to load products!
+            </h2>
 
-          <p className="mt-2 text-gray-500">
-            Please try again later.
-          </p>
+            <p className="mt-2 text-gray-500">
+              Please try again later.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* <Link
+        {/* <Link
         href={category ? `/products/?category=${category}` : "/products"}
         className="flex justify-end mt-4 underline text-sm text-gray-500"
       >
         View all products
       </Link> */}
-    </div>
-  );
+      </div>
+    );
   }
 
 

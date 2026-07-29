@@ -51,7 +51,7 @@ export default function RightSidebar() {
   const total = subtotal - discount + shipping;
 
   return (
-    <aside className="hidden w-90 shrink-0 self-start pl-4 pr-2 py-3 xl:block">
+    <aside className="hidden w-90 shrink-0 self-start pl-4 pr-2 py-3 lg:block">
       <div className="flex flex-col gap-4">
 
         <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -59,13 +59,13 @@ export default function RightSidebar() {
             <h2 className="text-lg font-semibold text-gray-950">
               My Cart ({cart.length})
             </h2>
-            <button
+            {/* <button
               type="button"
               aria-label="Close cart"
               className="flex size-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
             >
               <X className="size-4" />
-            </button>
+            </button> */}
           </div>
 
           <div className="max-h-35 overflow-y-auto pr-2" >
@@ -94,13 +94,13 @@ export default function RightSidebar() {
                       sizes="88px"
                       className="object-contain p-2"
                     />
-                    <button
+                    {/* <button
                       type="button"
                       aria-label="Add to wishlist"
                       className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm"
                     >
                       <Heart className="size-3.5" />
-                    </button>
+                    </button> */}
                   </div>
 
                   <div className="min-w-0">

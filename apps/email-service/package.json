@@ -13,7 +13,8 @@
   "dependencies": {
     "@repo/kafka": "workspace:*",
     "@repo/types": "workspace:*",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.0.3",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@repo/types": "workspace:*",

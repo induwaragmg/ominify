@@ -12,6 +12,7 @@ import ChatHistory from "./ChatHistory";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import MarkdownRenderer from "./MarkdownRenderer";
+import Image from "next/image";
 
 // ─── Streaming Phase Indicator ───────────────────────────────────────────────
 
@@ -62,10 +63,14 @@ function StreamingIndicator(): React.ReactNode {
     >
       {/* Bot header */}
       <div className="flex items-center gap-1.5 px-0.5">
-        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">
+        {/* <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">
           <Bot className="h-3 w-3" />
         </div>
-        <span className="text-[11px] font-medium text-gray-500">Ominify AI</span>
+        <span className="text-[11px] font-medium text-gray-500">Ominify AI</span> */}
+        <div className="relative h-5 w-5 shrink-0 items-center justify-center rounded-full">
+          <Image src="/icon.svg" alt="Ominify AI" fill className="object-contain" />
+        </div>
+        <span className="text-xs font-medium text-brand">Ominify AI</span>
       </div>
 
       <div className="w-full space-y-1.5">
@@ -277,17 +282,18 @@ export default function AssistantPanel(): React.ReactNode {
     <div className="flex h-full flex-1 flex-col min-h-0">
       <div className="max-w-3xl mx-auto w-full flex flex-col h-full min-h-0">
         {/* Header */}
-        <div className="flex shrink-0 items-center gap-3 px-4 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
-            <Bot className="h-5 w-5 text-white" />
+        <div className="flex  shrink-0 items-start px-4 py-4">
+          <div className="relative h-9 w-9 bg-[#f8f9fb] shrink-0 items-center  justify-center rounded-md">
+            <Image src="/icon.svg" alt="Ominify AI" fill className="object-contain" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">
+          <div className="flex flex-col pl-2">
+            <h3 className="text-sm font-semibold text-brand">
               Ominify Assistant
             </h3>
+            {/* <span className="text-xs font-medium text-brand">Ominify AI</span> */}
             <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span className="text-[11px] text-gray-400">
+              <span className={`h-1.5 w-1.5 rounded-full ${isLoaded && !isSignedIn ? "bg-red-400" : "bg-emerald-400"}`} />
+              <span className={`text-[11px] ${isLoaded && !isSignedIn ? "text-red-600" : "text-gray-400"}`}>
                 {isLoaded && !isSignedIn ? "Sign In Required" : "Online"}
               </span>
             </div>

@@ -2,7 +2,7 @@
 
 import type { Message, FollowUpSuggestionsContentBlock } from "@/types/assistant";
 import useAssistantStore from "@/stores/assistantStore";
-import { Bot } from "lucide-react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import ProductRecommendationCard from "./ProductRecommendationCard";
 import MarkdownRenderer from "./MarkdownRenderer";
@@ -63,10 +63,10 @@ export default function ChatMessage({ message }: ChatMessageProps): React.ReactN
       >
         {/* Bot header indicator above message */}
         <div className="flex items-center gap-1.5 px-0.5 mb-1">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">
-            <Bot className="h-3 w-3" />
+          <div className="relative h-5 w-5 shrink-0 items-center justify-center rounded-full">
+            <Image src="/icon.svg" alt="Ominify AI" fill className="object-contain" />
           </div>
-          <span className="text-[11px] font-medium text-gray-500">Ominify AI</span>
+          <span className="text-xs font-medium text-brand">Ominify AI</span>
         </div>
 
         {/* Message content - capped at max-w-[640px] so text doesn't stretch infinitely on wide panels */}
@@ -162,8 +162,8 @@ export function TypingIndicator(): React.ReactNode {
       className="flex w-full flex-col items-start gap-1 max-w-[640px]"
     >
       <div className="flex items-center gap-1.5 px-0.5">
-        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xs">
-          <Bot className="h-3 w-3" />
+        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 p-0.5 shadow-xs">
+          <Image src="/icon.svg" alt="Ominify AI" width={14} height={14} className="h-3.5 w-3.5 object-contain" />
         </div>
         <span className="text-[11px] font-medium text-gray-500">Ominify AI</span>
       </div>

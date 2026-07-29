@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Workspace from "@/components/Workspace/Workspace";
 import { AppSidebar } from "@/components/AppSidebar";
 import {
   SidebarProvider,
@@ -15,23 +16,19 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
 
-      {/* CHANGE: Use SidebarInset instead of a custom wrapper. */}
       <SidebarInset className="bg-[#f8f9fb] pl-2 pr-3">
-
-        {/* CHANGE: Make the content occupy the available height. */}
-        <div className="flex flex-1 flex-col">
-
-          <Navbar />
-
-          {/* CHANGE: Allow dashboard pages to grow. */}
-          <main className="flex-1 min-w-0">
-            {children}
-          </main>
-
+        <div>
+          <div className="flex flex-1 min-w-0">
+            <div className="flex flex-1 min-w-0 flex-col">
+              <Navbar />
+              <main className="flex-1 min-w-0">
+                {children}
+              </main>
+            </div>
+            <Workspace />
+          </div>
           <Footer />
-
         </div>
-
       </SidebarInset>
     </SidebarProvider>
   );
