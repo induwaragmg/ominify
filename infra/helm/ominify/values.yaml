@@ -1,0 +1,111 @@
+global:
+  domain: ominify.com
+  registry: ghcr.io/owner/ecommerse_app
+  imageTag: latest
+
+services:
+  auth:
+    name: auth-service
+    replicaCount: 2
+    image: auth-service
+    containerPort: 5001
+    path: /api/auth
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  product:
+    name: product-service
+    replicaCount: 2
+    image: product-service
+    containerPort: 5002
+    path: /api/products
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  order:
+    name: order-service
+    replicaCount: 2
+    image: order-service
+    containerPort: 5003
+    path: /api/orders
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  payment:
+    name: payment-service
+    replicaCount: 2
+    image: payment-service
+    containerPort: 5004
+    path: /api/payments
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  assistant:
+    name: assistant-service
+    replicaCount: 2
+    image: assistant-service
+    containerPort: 8000
+    path: /api/assistant
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+  client:
+    name: client
+    replicaCount: 2
+    image: client
+    containerPort: 3002
+    path: /
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  admin:
+    name: admin
+    replicaCount: 2
+    image: admin
+    containerPort: 3003
+    path: /admin
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+  tlsSecret: ominify-tls-secret

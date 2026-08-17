@@ -1,0 +1,19 @@
+{{- range $key, $service := .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $service.name }}
+  namespace: ominify-prod
+  labels:
+    app.kubernetes.io/name: {{ $service.name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ $service.containerPort }}
+      targetPort: {{ $service.containerPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ $service.name }}
+{{- end }}

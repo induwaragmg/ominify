@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:5001']
+
+  - job_name: 'product-service'
+    static_configs:
+      - targets: ['product-service:5002']
+
+  - job_name: 'order-service'
+    static_configs:
+      - targets: ['order-service:5003']
+
+  - job_name: 'payment-service'
+    static_configs:
+      - targets: ['payment-service:5004']
+
+  - job_name: 'assistant-service'
+    static_configs:
+      - targets: ['assistant-service:8000']

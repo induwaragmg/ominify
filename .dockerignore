@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+.git
+.turbo
+out
+*.log
+.env*
+.pytest_cache
+.venv
+__pycache__
+coverage

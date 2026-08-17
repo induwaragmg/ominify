@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ominify
+description: Helm Chart for Ominify Monorepo Microservices & Frontends
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
