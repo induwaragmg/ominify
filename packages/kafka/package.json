@@ -1,9 +1,10 @@
 {
     "name": "@repo/kafka",
     "version": "0.0.1",
-    "main": "./src/index.ts",
+    "main": "./dist/index.js",
     "type": "module",
     "scripts": {
+        "build": "tsc",
         "check-types": "tsc --noEmit"
     },
     "devDependencies": {

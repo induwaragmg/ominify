@@ -1,0 +1,53 @@
+# ignore Node.js dependencies from the host machine.
+node_modules
+**/node_modules
+
+# ignore Next.js build artifacts.
+.next
+**/.next
+
+# ignore compiled Node.js output.
+dist
+**/dist
+
+# ignore Turborepo cache and prune output.
+.turbo
+out
+**/out
+
+# ignore Git metadata.
+.git
+.gitignore
+
+# ignore application and package-manager logs.
+*.log
+pnpm-debug.log*
+yarn-debug.log*
+npm-debug.log*
+
+# Prevent local environment secrets from entering Docker.
+.env
+.env.*
+!.env.example
+
+# ignore Python virtual environments.
+.venv
+**/.venv
+
+# ignore Python cache files.
+__pycache__
+**/__pycache__
+
+# ignore local SQLite databases.
+*.db
+*.sqlite
+*.sqlite3
+
+# ignore Python testing and coverage artifacts.
+.pytest_cache
+coverage
+
+# ignore local IDE and operating-system files.
+.vscode
+.idea
+.DS_Store
