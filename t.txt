@@ -1,0 +1,10 @@
+echo "========== ORDER SERVICE PACKAGE ==========" &&cat apps/order-service/package.json &&
+echo "========== ORDER SERVICE TSCONFIG ==========" &&cat apps/order-service/tsconfig.json &&
+echo "========== ORDER SERVICE DOCKERFILE ==========" &&if [ -f apps/order-service/Dockerfile ]; thencat apps/order-service/Dockerfileelseecho "NO DOCKERFILE"fi &&
+echo "========== ORDER SERVICE SOURCE ==========" &&find apps/order-service/src -type f | sort &&
+echo "========== ORDER SERVICE IMPORTS ==========" &&grep -R -nE 'from ["''']|require(' apps/order-service/src --include='*.ts' || true &&
+echo "========== ORDER DB PACKAGE ==========" &&cat packages/order-db/package.json &&
+echo "========== ORDER DB TSCONFIG ==========" &&cat packages/order-db/tsconfig.json &&
+echo "========== ORDER DB SOURCE ==========" &&find packages/order-db -maxdepth 3 -type f | sort &&
+echo "========== ORDER DB IMPORTS ==========" &&grep -R -nE 'mongoose|MongoDB|mongodb|process.env' packages/order-db --include='*.ts' || true &&
+echo "========== EXISTING DOCKER CONTAINERS ==========" &&docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}\t{{.Networks}}" |grep -Ei 'mongo|order|kafka' || true

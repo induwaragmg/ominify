@@ -1,5 +1,5 @@
-import { consumer } from "./kafka"
-import { createOrder } from "./order";
+import { consumer } from "./kafka.js"
+import { createOrder } from "./order.js";
 
 export const runKafkaSubscriptions = async () => {
 

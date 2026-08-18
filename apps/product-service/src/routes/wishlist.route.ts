@@ -4,8 +4,8 @@ import {
   getWishlist,
   getWishlistProductIds,
   removeFromWishlist,
-} from "../controllers/wishlist.controller";
-import { shouldBeUser } from "../middleware/authMiddleware";
+} from "../controllers/wishlist.controller.js";
+import { shouldBeUser } from "../middleware/authMiddleware.js";
 
 const router: Router = Router();
 

@@ -1,5 +1,5 @@
 import { StripeProductType } from "@repo/types";
-import stripe from "./stripe";
+import stripe from "./stripe.js";
 
 export const createStripeProduct = async (item: StripeProductType) => {
     try {

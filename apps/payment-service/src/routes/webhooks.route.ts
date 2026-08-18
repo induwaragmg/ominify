@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import Stripe from "stripe";
-import stripe from "../utils/stripe";
-import { producer } from "../utils/kafka";
+import stripe from "../utils/stripe.js";
+import { producer } from "../utils/kafka.js";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
 const webhookRoute = new Hono();
@@ -31,36 +31,38 @@ webhookRoute.post("/stripe", async (c) => {
 
             // TODO: create order
             console.log("#######################################\n webhook received", session, "\n##################################");
+            //  Send the order fields directly instead of wrapping them inside `value`.
+            // The Kafka producer already serializes the supplied object as the message value.
             producer.send("payment.successful", {
-                value: {
-                    userId: session.client_reference_id,
-                    email: session.customer_details?.email,
-                    amount: session.amount_total,
-                    status: session.payment_status === "paid" ? "success" : "failed",
-                    products: lineItems.data.map((item) => {
-                        const stripeProduct = item.price?.product as
-                            | Stripe.Product
-                            | string
-                            | null;
-                        const metadata =
-                            typeof stripeProduct === "object" && stripeProduct
-                                ? stripeProduct.metadata
-                                : {};
+                userId: session.client_reference_id,
+                email: session.customer_details?.email,
+                amount: session.amount_total,
+                status: session.payment_status === "paid" ? "success" : "failed",
 
-                        return {
-                            productId: metadata.productId
-                                ? Number(metadata.productId)
-                                : undefined,
-                            name: item.description,
-                            quantity: item.quantity,
-                            price: item.price?.unit_amount,
-                            image: metadata.image,
-                            selectedColor: metadata.selectedColor,
-                            selectedSize: metadata.selectedSize,
-                        };
-                    }),
-                    //shipping address
-                }
+                products: lineItems.data.map((item) => {
+                    const stripeProduct = item.price?.product as
+                        | Stripe.Product
+                        | string
+                        | null;
+
+                    const metadata =
+                        typeof stripeProduct === "object" && stripeProduct
+                            ? stripeProduct.metadata
+                            : {};
+
+                    return {
+                        productId: metadata.productId
+                            ? Number(metadata.productId)
+                            : undefined,
+                        name: item.description,
+                        quantity: item.quantity,
+                        price: item.price?.unit_amount,
+                        image: metadata.image,
+                        selectedColor: metadata.selectedColor,
+                        selectedSize: metadata.selectedSize,
+                    };
+                }),
+                //shipping address
             })
 
             break;

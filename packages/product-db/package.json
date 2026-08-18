@@ -5,7 +5,8 @@
   "scripts": {
     "db:generate": "prisma generate", 
     "db:migrate": "prisma migrate dev", 
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "build": "tsc"
   }, 
   "devDependencies": {
     "@types/node": "^25.9.0",
@@ -18,7 +19,13 @@
     "dotenv": "^17.4.2",
     "pg": "^8.21.0"
   },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
   }
 }
