@@ -1,6 +1,7 @@
-import sendMail from "./utils/mailer";
+// CHANGE 1: Use .js extensions in ESM relative imports.
+import sendMail from "./utils/mailer.js";
 import { createConsumer, createKafkaClient } from "@repo/kafka";
-import { generateOrderEmailHtml } from "./utils/orderEmailTemplate";
+import { generateOrderEmailHtml } from "./utils/orderEmailTemplate.js";
 
 const kafka = createKafkaClient("email-service");
 const consumer = createConsumer(kafka, "email-service");
@@ -12,7 +13,9 @@ const start = async () => {
       {
         topicName: "user.created",
         topicHandler: async (message) => {
-          const { email, username } = message.value;
+          // CHANGE 2: Support both value-wrapped messages and direct test payloads.
+          const payload = message?.value ?? message;
+          const { email, username } = payload;
 
           if (email) {
             await sendMail({
@@ -26,7 +29,9 @@ const start = async () => {
       {
         topicName: "order.created",
         topicHandler: async (message) => {
-          const { email, amount, status, orderId, products, createdAt } = message.value;
+          // CHANGE 3: Support both value-wrapped messages and direct test payloads.
+          const payload = message?.value ?? message;
+          const { email, amount, status, orderId, products, createdAt } = payload;
 
           if (email) {
             const htmlContent = generateOrderEmailHtml({

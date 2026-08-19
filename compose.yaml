@@ -1,0 +1,304 @@
+name: ominify-ecommerce
+
+services:
+  # ============================================================
+  # Infrastructure: PostgreSQL Database Service
+  # Runs single PostgreSQL instance hosting both products and assistant_db.
+  # Uses external named volume containing existing application databases.
+  # ============================================================
+  postgres-product-db:
+    image: postgres:latest
+    container_name: postgres-product-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./scripts/init-postgres-db.sh:/docker-entrypoint-initdb.d/init-postgres-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-products}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ominify-network
+
+  # ============================================================
+  # Infrastructure: Kafka KRaft Brokers (3 Brokers)
+  # ============================================================
+  kafka-broker-1:
+    image: docker.io/bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: kafka-broker-1
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:9093,2@kafka-broker-2:9093,3@kafka-broker-3:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_KRAFT_CLUSTER_ID: 7Dvn0OLMQo-bg4qmCmflVg
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "9094:9094"
+    networks:
+      - ominify-network
+
+  kafka-broker-2:
+    image: docker.io/bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: kafka-broker-2
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: 2
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://0.0.0.0:9095
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:9092,EXTERNAL://localhost:9095
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:9093,2@kafka-broker-2:9093,3@kafka-broker-3:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_KRAFT_CLUSTER_ID: 7Dvn0OLMQo-bg4qmCmflVg
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "9095:9095"
+    networks:
+      - ominify-network
+
+  kafka-broker-3:
+    image: docker.io/bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: kafka-broker-3
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: 3
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://0.0.0.0:9096
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-3:9092,EXTERNAL://localhost:9096
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:9093,2@kafka-broker-2:9093,3@kafka-broker-3:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_KRAFT_CLUSTER_ID: 7Dvn0OLMQo-bg4qmCmflVg
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "9096:9096"
+    networks:
+      - ominify-network
+
+  # ============================================================
+  # Infrastructure: Kafka One-Shot Topic Initializer Service
+  # Idempotently creates required Kafka topics with ReplicationFactor=3
+  # and ensures cluster metadata/quorum readiness before microservices start.
+  # ============================================================
+  kafka-init:
+    image: docker.io/bitnamilegacy/kafka:4.0.0-debian-12-r10 # Reuses Bitnami Kafka CLI tools to avoid extra image builds
+    container_name: kafka-init # One-shot initialization container name
+    volumes:
+      - ./scripts/init-kafka-topics.sh:/scripts/init-kafka-topics.sh:ro # Mount topic initialization script
+    entrypoint: [ "/bin/bash", "/scripts/init-kafka-topics.sh" ] # Execute topic initialization script
+    depends_on:
+      # Ensure all 3 brokers pass healthchecks before initializing topics
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - ominify-network # Connect to internal Compose bridge network
+
+  # ============================================================
+  # Infrastructure: Kafka UI Management Interface
+  # ============================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092
+      KAFKA_CLUSTERS_0_READONLY: "false"
+      KAFKA_CLUSTERS_0_TOPIC_AUTO_CREATE: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres-product-db:
+        condition: service_healthy
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init to create topics
+    networks:
+      - ominify-network
+
+  # ============================================================
+  # Application Microservices
+  # ============================================================
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: ominify-auth-service
+    env_file:
+      - apps/auth-service/.env
+    ports:
+      - "8003:8003"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init topic creation to complete successfully
+    networks:
+      - ominify-network
+
+  product-service:
+    build:
+      context: .
+      dockerfile: apps/product-service/Dockerfile
+    container_name: ominify-product-service
+    env_file:
+      - apps/product-service/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres-product-db:
+        condition: service_healthy
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init topic creation to complete successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - ominify-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: apps/order-service/Dockerfile
+    container_name: ominify-order-service
+    env_file:
+      - apps/order-service/.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init topic creation to complete successfully
+    networks:
+      - ominify-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: apps/payment-service/Dockerfile
+    container_name: ominify-payment-service
+    env_file:
+      - apps/payment-service/.env
+    ports:
+      - "8002:8002"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init topic creation to complete successfully
+    networks:
+      - ominify-network
+
+  email-service:
+    build:
+      context: .
+      dockerfile: apps/email-service/Dockerfile
+    container_name: ominify-email-service
+    env_file:
+      - apps/email-service/.env
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully # Wait for kafka-init topic creation to complete successfully
+    networks:
+      - ominify-network
+
+  assistant-service:
+    build:
+      context: .
+      dockerfile: apps/assistant-service/Dockerfile
+    container_name: ominify-assistant-service
+    env_file:
+      - apps/assistant-service/.env
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres-product-db:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+    networks:
+      - ominify-network
+
+networks:
+  ominify-network:
+    name: ominify-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: 03e66ac09ced6dd55e5ed838ae5912d9af67ddfebb77c3858f545ae4f1e1c7dd
+    external: true

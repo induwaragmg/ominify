@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { prisma, Prisma } from "@repo/product-db";
 import { StripeProductType } from "@repo/types";
-import { producer } from "../utils/kafka";
+import { producer } from "../utils/kafka.js";
 
 export const createProduct = async ( req: Request, res: Response ) => {
     const data : Prisma.ProductCreateManyInput = req.body;

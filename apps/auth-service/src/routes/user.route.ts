@@ -1,10 +1,10 @@
 import { Router } from "express";
-import clerkClient from "../utils/clerk";
-import { producer } from "../utils/kafka";
+import clerkClient from "../utils/clerk.js";
+import { producer } from "../utils/kafka.js";
 
-const router : Router = Router();
+const router: Router = Router();
 
-router.get("/", async(req, res) => {
+router.get("/", async (req, res) => {
     const users = await clerkClient.users.getUserList();
     res.status(200).json(users);
 });

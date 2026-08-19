@@ -1,13 +1,27 @@
 {
-    "name": "@repo/order-db",
-    "version": "0.0.1",
-    "type": "module",
-    "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
-        "@types/node": "^25.9.1",
-        "mongoose": "^9.6.2"
-    },
-    "exports": { 
-        ".": "./src/index.ts"
+  "name": "@repo/order-db",
+  "version": "0.0.1",
+  "type": "module",
+
+  "scripts": {
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
+  },
+
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     }
+  },
+  "dependencies": {
+    "mongoose": "^9.6.2"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.9.1"
+  }
 }

@@ -1,0 +1,64 @@
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ cat apps/auth-service/package.json
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm dlx tsx --env-file=.env --watch src/index.ts",
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@clerk/express": "^2.1.12",
+    "cors": "^2.8.6",
+    "express": "^5.0.3",
+    "@repo/kafka": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3"
+  }
+}
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ grep -RniE 'DATABASE_URL|KAFKA_BROKERS|localhost:|postgres-product-db|kafka-broker' \
+apps/auth-service/src \
+--exclude-dir=node_modules \
+--exclude-dir=dist
+apps/auth-service/src/index.ts:10:app.use(cors({origin: ["http://localhost:3003"], credentials: true}));
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ docker inspect ominify-product-service-test \
+--format '{{json .Config.Env}}'
+["CLERK_PUBLISHABLE_KEY=<redacted>","CLERK_SECRET_KEY=<redacted>","DATABASE_URL=postgresql://admin:<redacted>@postgres-product-db:5432/products","KAFKA_BROKERS=kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092","PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","NODE_VERSION=20.20.2","YARN_VERSION=1.22.22"] 
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ docker inspect ominify-order-service \
+--format '{{json .Config.Env}}'
+["CLERK_PUBLISHABLE_KEY=<redacted>","CLERK_SECRET_KEY=<redacted>","MONGO_URL=mongodb+srv://induwaragmg:<redacted>@cluster0.g0souxl.mongodb.net/orders?appName=Cluster0","KAFKA_BROKERS=kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092","PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","NODE_VERSION=20.20.2","YARN_VERSION=1.22.22"]
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ docker inspect ominify-payment-service \
+--format '{{json .Config.Env}}'
+["CLERK_PUBLISHABLE_KEY=<redacted>","CLERK_SECRET_KEY=<redacted>","STRIPE_SECRET_KEY=<redacted>","STRIPE_WEBHOOK_SECRET=<redacted>","KAFKA_BROKERS=kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092","PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","NODE_VERSION=20.20.2","YARN_VERSION=1.22.22"]
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ docker inspect ominify-email-service \
+--format '{{json .Config.Env}}'
+["GOOGLE_CLIENT_ID=<redacted>","GOOGLE_CLIENT_SECRET=<redacted>","GOOGLE_REFRESH_TOKEN=<redacted>","KAFKA_BROKERS=kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092","PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","NODE_VERSION=20.20.2","YARN_VERSION=1.22.22"]
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$ docker inspect ominify-assistant-service \
+--format '{{json .Config.Env}}'
+["GEMINI_API_KEY=<redacted>","GEMINI_MODEL=gemini-3.1-flash-lite","DATABASE_URL=postgresql+asyncpg://admin:<redacted>@postgres-product-db:5432/assistant_db","ENV=production","DEBUG=false","PATH=/app/.venv/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","LANG=C.UTF-8","GPG_KEY=<redacted>","PYTHON_VERSION=3.12.14","PYTHON_SHA256=<redacted>","PYTHONUNBUFFERED=1"]
+
+Asus@DESKTOP-AANH3TO MINGW64 /d/lessons/Full Stack e commerse app/ecommerse_app (feature-docker-integration)
+$
