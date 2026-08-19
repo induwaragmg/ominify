@@ -19,7 +19,7 @@ function formatTime(date: Date): string {
   }).format(date);
 }
 
-function FollowUpSuggestions({ block }: { block: FollowUpSuggestionsContentBlock }) {
+function FollowUpSuggestions({ block }: { block: FollowUpSuggestionsContentBlock }): React.ReactNode {
   const { sendMessage, activeConversation } = useAssistantStore();
 
   if (!block.suggestions || block.suggestions.length === 0) return null;

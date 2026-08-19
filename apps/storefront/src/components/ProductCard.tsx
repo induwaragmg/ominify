@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ProductCard = ({ product }: { product: ProductType }) => {
+const ProductCard = ({ product }: { product: ProductType }): React.ReactNode => {
   const [productTypes, setProductTypes] = useState({
     size: product.sizes[0]!,
     color: product.colors[0]!,

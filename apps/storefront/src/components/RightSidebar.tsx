@@ -33,7 +33,7 @@ function getItemImage(item: CartItemType): string {
   return images?.[item.selectedColor] ?? Object.values(images ?? {})[0] ?? "/products/1g.png";
 }
 
-export default function RightSidebar() {
+export default function RightSidebar(): React.ReactNode {
   const router = useRouter();
   const pathname = usePathname();
   const { cart, removeFromCart, updateCartItem } = useCartStore();

@@ -41,14 +41,6 @@ export default function SignInPage(): React.ReactNode {
       <div className="relative z-20 w-full flex justify-center p-4">
         <SignIn
           appearance={ominifyClerkAppearance}
-          localization={{
-            signIn: {
-              start: {
-                title: "Sign in to Ominify",
-                subtitle: "Welcome back! Please sign in to continue to Ominify",
-              },
-            },
-          }}
         />
       </div>
     </div>

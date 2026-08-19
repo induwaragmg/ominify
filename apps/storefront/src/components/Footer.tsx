@@ -1,7 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 
-const Footer = () => {
+const Footer = (): React.ReactNode => {
   return (
     <div className="w-full">
       {/* <div className="mt-16 flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-between md:gap-0  p-8 "> */}

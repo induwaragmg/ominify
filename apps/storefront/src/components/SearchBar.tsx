@@ -2,12 +2,13 @@
 
 import { Search, Loader2, X, ArrowRight, Package, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductType } from "@repo/types";
 
-const SearchBar = (): JSX.Element => {
+// Inner component that uses useSearchParams (must be inside Suspense for Next.js 15 static prerendering)
+const SearchBarContent = (): JSX.Element => {
   const [value, setValue] = useState("");
   const [results, setResults] = useState<ProductType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -367,5 +368,17 @@ const SearchBar = (): JSX.Element => {
     </div>
   );
 };
+
+// Wrapped in Suspense because useSearchParams() requires it during Next.js 15 static prerendering
+const SearchBar = (): JSX.Element => (
+  <Suspense fallback={
+    <div className="flex flex-1 max-w-xl items-center gap-2 rounded-full ring-1 ring-gray-200/80 pl-3 pr-1 py-1 shadow-xs bg-white">
+      <input type="text" placeholder="Search..." disabled className="text-sm outline-hidden pl-1 w-full min-w-0 text-gray-400 bg-transparent py-1.5" />
+      <div className="bg-gray-200 rounded-full w-9 h-9 shrink-0" />
+    </div>
+  }>
+    <SearchBarContent />
+  </Suspense>
+);
 
 export default SearchBar;

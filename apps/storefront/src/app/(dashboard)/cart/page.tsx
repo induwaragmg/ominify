@@ -5,10 +5,10 @@ import ShippingForm from "@/components/ShippingForm";
 import StripePaymentForm from "@/components/StripePaymentForm";
 import useCartStore from "@/stores/cartStore";
 import { CartItemsType, ShippingFormInputs } from "@repo/types";
-import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -89,7 +89,7 @@ const steps = [
 //   },
 // ];
 
-const CartPage = (): React.ReactNode => {
+const CartContent = (): React.ReactNode => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [shippingForm, setShippingForm] = useState<ShippingFormInputs>();
@@ -331,4 +331,16 @@ const CartPage = (): React.ReactNode => {
   );
 };
 
-export default CartPage;
+export default function CartPage(): React.ReactNode {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-80 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <CartContent />
+    </Suspense>
+  );
+}

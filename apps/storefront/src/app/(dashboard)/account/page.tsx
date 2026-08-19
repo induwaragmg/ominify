@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import {
   User,
@@ -166,7 +166,8 @@ const QuickLink = ({
 );
 
 // ─── Main Page ──────────────────────────────────────────────────────────────────
-const AccountSettingsPage = (): React.ReactNode => {
+// Inner component that uses Clerk hooks (which internally call useSearchParams)
+const AccountContent = (): React.ReactNode => {
   const { user, isLoaded } = useUser();
   const { signOut } = useAuth();
 
@@ -448,4 +449,18 @@ const AccountSettingsPage = (): React.ReactNode => {
   );
 };
 
-export default AccountSettingsPage;
+// Wrapped in Suspense because Clerk hooks internally call useSearchParams(),
+// which Next.js 15 requires to be inside a Suspense boundary during static prerendering.
+export default function AccountSettingsPage(): React.ReactNode {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-80 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <AccountContent />
+    </Suspense>
+  );
+}

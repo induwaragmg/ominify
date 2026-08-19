@@ -167,7 +167,7 @@ const fetchData = async ({
 };
 
 // TODO: temporary put 'any' later fix this ############
-const ProductList : any = async ({
+const ProductList = async ({
   category,
   sort,
   search,
@@ -177,7 +177,7 @@ const ProductList : any = async ({
   sort?: string;
   search?: string;
   params: "homepage" | "products";
-}) => {
+}): Promise<React.ReactNode> => {
   try {
     const products = await fetchData({
       category,

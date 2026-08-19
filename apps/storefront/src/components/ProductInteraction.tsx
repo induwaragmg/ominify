@@ -6,10 +6,11 @@ import { useAuth } from "@clerk/nextjs";
 import { ProductType } from "@repo/types";
 import { Heart, Minus, Plus, ShoppingCart } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-const ProductInteraction = ({
+// Inner component that uses useSearchParams (must be inside Suspense for Next.js 15 static prerendering)
+const ProductInteractionContent = ({
   product,
   selectedSize,
   selectedColor,
@@ -17,7 +18,7 @@ const ProductInteraction = ({
   product: ProductType;
   selectedSize: string;
   selectedColor: string;
-}) => {
+}): React.ReactNode => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -174,5 +175,16 @@ const ProductInteraction = ({
     </div>
   );
 };
+
+// Wrapped in Suspense because useSearchParams() requires it during Next.js 15 static prerendering
+const ProductInteraction = (props: {
+  product: ProductType;
+  selectedSize: string;
+  selectedColor: string;
+}): React.ReactNode => (
+  <Suspense fallback={<div className="h-20" />}>
+    <ProductInteractionContent {...props} />
+  </Suspense>
+);
 
 export default ProductInteraction;

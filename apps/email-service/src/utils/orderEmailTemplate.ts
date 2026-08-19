@@ -62,7 +62,7 @@ export function generateOrderEmailHtml(data: OrderEmailData): string {
             const imgUrl = item.image
               ? item.image.startsWith("http")
                 ? item.image
-                : `https://raw.githubusercontent.com/induwaragmg/ominify/main/apps/client/public${item.image}`
+                : `https://raw.githubusercontent.com/induwaragmg/ominify/main/apps/storefront/public${item.image}`
               : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&auto=format&fit=crop&q=80";
 
             return `

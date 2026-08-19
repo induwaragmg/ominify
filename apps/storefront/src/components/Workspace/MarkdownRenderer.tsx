@@ -47,7 +47,7 @@ function preprocessContent(rawContent: string): string {
 /**
  * Custom CodeBlock with interactive Copy button.
  */
-function CodeBlock({ code, language }: { code: string; language?: string }) {
+function CodeBlock({ code, language }: { code: string; language?: string }): React.ReactNode {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {

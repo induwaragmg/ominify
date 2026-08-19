@@ -41,14 +41,6 @@ export default function SignUpPage(): React.ReactNode {
       <div className="relative z-20 w-full flex justify-center p-4">
         <SignUp
           appearance={ominifyClerkAppearance}
-          localization={{
-            signUp: {
-              start: {
-                title: "Create your Ominify account",
-                subtitle: "Welcome! Please fill in your details to get started with Ominify",
-              },
-            },
-          }}
         />
       </div>
     </div>

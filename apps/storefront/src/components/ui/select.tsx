@@ -8,7 +8,7 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 const Select = SelectPrimitive.Root
 
-function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
+function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props): React.ReactNode {
   return (
     <SelectPrimitive.Group
       data-slot="select-group"
@@ -18,7 +18,7 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, ...props }: SelectPrimitive.Value.Props): React.ReactNode {
   return (
     <SelectPrimitive.Value
       data-slot="select-value"

@@ -13,7 +13,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 const allCategory = {
   name: "All",
@@ -67,7 +67,8 @@ const middleCategories = [
   },
 ];
 
-const Categories = (): React.ReactNode => {
+// Inner component that uses useSearchParams (must be inside Suspense for Next.js 15 static prerendering)
+const CategoriesContent = (): React.ReactNode => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -204,5 +205,12 @@ const Categories = (): React.ReactNode => {
     </div>
   );
 };
+
+// Wrapped in Suspense because useSearchParams() requires it during Next.js 15 static prerendering
+const Categories = (): React.ReactNode => (
+  <Suspense fallback={<div className="my-4 h-12" />}>
+    <CategoriesContent />
+  </Suspense>
+);
 
 export default Categories;

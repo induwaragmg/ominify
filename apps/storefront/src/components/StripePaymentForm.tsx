@@ -26,7 +26,7 @@ const clientSecret = async (cart: CartItemsType, token: string) => {
     .then((json) => json.checkoutSessionClientSecret);
 };
 
-const StripePaymentForm = ({ shippingForm }: { shippingForm: ShippingFormInputs }) => {
+const StripePaymentForm = ({ shippingForm }: { shippingForm: ShippingFormInputs }): React.ReactNode => {
 
   const { cart } = useCartStore();
   const [token, setToken] = useState<string | null>(null);

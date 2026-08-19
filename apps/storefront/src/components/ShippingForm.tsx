@@ -15,7 +15,7 @@ const ShippingForm = ({
   setShippingForm,
 }: {
   setShippingForm: (data: ShippingFormInputs) => void;
-}) => {
+}): React.ReactNode => {
   const {
     register,
     handleSubmit,

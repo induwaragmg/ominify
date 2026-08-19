@@ -19,7 +19,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>): React.ReactNode {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      localization={{
+        signIn: {
+          start: {
+            title: "Sign in to Ominify",
+            subtitle: "Welcome back! Please sign in to continue to Ominify",
+          },
+        },
+        signUp: {
+          start: {
+            title: "Create your Ominify account",
+            subtitle: "Welcome! Please fill in your details to get started with Ominify",
+          },
+        },
+      }}
+    >
       <html lang="en" className="h-full">
         <body className={`${inter.className} min-h-screen antialiased bg-[linear-gradient(180deg,#fafafa_0%,#fbfbfb_40%,#fcfcfc_100%)] font-sans`}>
           {children}

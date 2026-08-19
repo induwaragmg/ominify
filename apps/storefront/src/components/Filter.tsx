@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ReactElement } from "react";
+import { ReactElement, Suspense } from "react";
 
-const Filter : () => ReactElement = () => {
+// Inner component that uses useSearchParams (must be inside Suspense for Next.js 15 static prerendering)
+const FilterContent : () => ReactElement = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -31,5 +32,12 @@ const Filter : () => ReactElement = () => {
     </div>
   );
 };
+
+// Wrapped in Suspense because useSearchParams() requires it during Next.js 15 static prerendering
+const Filter = (): ReactElement => (
+  <Suspense fallback={<div className="flex items-center justify-end gap-2 text-sm text-gray-400 my-6">Sort by: ...</div>}>
+    <FilterContent />
+  </Suspense>
+);
 
 export default Filter;
