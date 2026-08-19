@@ -42,3 +42,5 @@ tempdetails.txt
 
 # prisma db 
 packages/product-db/generated
+
+temp.txt
