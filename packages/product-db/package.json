@@ -6,7 +6,7 @@
     "db:generate": "prisma generate", 
     "db:migrate": "prisma migrate dev", 
     "db:deploy": "prisma migrate deploy",
-    "build": "tsc"
+    "build": "prisma generate && tsc"
   }, 
   "devDependencies": {
     "@types/node": "^25.9.0",
