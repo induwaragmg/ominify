@@ -38,6 +38,7 @@ class CompareProductsTool:
 
     async def execute(self, product_ids: List[str]) -> Dict[str, Any]:
         """Validate list of product IDs and fetch side-by-side details."""
+        
         if not product_ids or not isinstance(product_ids, list):
             return {"status": "error", "message": "product_ids must be a non-empty list of product IDs"}
 

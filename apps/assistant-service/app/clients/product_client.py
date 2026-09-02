@@ -123,6 +123,9 @@ class ProductClient:
             params1["search"] = clean_query
         if category:
             params1["category"] = category
+        
+        # TODO: apply for also min price pax price,
+        
 
         response = await self._execute_request_with_retry(
             endpoint_paths=["/products", "/api/v1/products/search", "/api/v1/products"],
@@ -191,3 +194,6 @@ class ProductClient:
         if product and "category" in product:
             return await self.search_products(query="", category=product["category"], limit=limit)
         return await self.get_featured_products(limit=limit)
+
+
+
